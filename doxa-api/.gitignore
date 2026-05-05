@@ -1,0 +1,17 @@
+# Gradle arquivos temporários
+.gradle/
+build/
+
+# IntelliJ IDEA (Arquivos de configuração pessoal)
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Sistema Operacional
+.DS_Store
+Thumbs.db
+
+# Java/Kotlin
+*.class
+*.log
