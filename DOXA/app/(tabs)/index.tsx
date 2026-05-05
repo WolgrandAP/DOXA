@@ -1,98 +1,182 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useState } from "react";
+import {
+  View,
+  StyleSheet,
+  Text,
+  SafeAreaView,
+  TouchableOpacity,
+  StatusBar,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
+import { Ionicons } from "@expo/vector-icons";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { RecommendedFeed } from "@/components/RecommendedFeed";
+import { FollowingFeed } from "@/components/FollowingFeed";
 
-export default function HomeScreen() {
+export default function FeedScreen() {
+  const [activeTab, setActiveTab] = useState<"recommended" | "following">(
+    "recommended",
+  );
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      <LinearGradient
+        colors={["#050510", "#050510", "#170326"]}
+        style={StyleSheet.absoluteFill}
+      />
+
+      <SafeAreaView style={{ flex: 1 }}>
+        {/* APP LOGO SECTION */}
+        <View style={styles.logoContainer}>
+          <Ionicons name="terminal" size={32} color="#a855f7" />
+          {/* Se tiver uma imagem: <Image source={require('@/assets/logo.png')} style={styles.logo} /> */}
+        </View>
+
+        {/* TOP TABS NAVIGATION */}
+        <View style={styles.headerTabs}>
+          <TouchableOpacity
+            onPress={() => setActiveTab("recommended")}
+            style={[
+              styles.tabButton,
+              activeTab === "recommended" && styles.activeTabBorder,
+            ]}
+          >
+            <Text
+              style={[
+                styles.tabLabel,
+                activeTab === "recommended"
+                  ? styles.activeText
+                  : styles.inactiveText,
+              ]}
+            >
+              Recommended
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setActiveTab("following")}
+            style={[
+              styles.tabButton,
+              activeTab === "following" && styles.activeTabBorder,
+            ]}
+          >
+            <Text
+              style={[
+                styles.tabLabel,
+                activeTab === "following"
+                  ? styles.activeText
+                  : styles.inactiveText,
+              ]}
+            >
+              Following
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.feedWrapper}>
+          <View
+            style={{
+              flex: 1,
+              display: activeTab === "recommended" ? "flex" : "none",
+            }}
+          >
+            <RecommendedFeed />
+          </View>
+
+          <View
+            style={{
+              flex: 1,
+              display: activeTab === "following" ? "flex" : "none",
+            }}
+          >
+            <FollowingFeed />
+          </View>
+        </View>
+      </SafeAreaView>
+
+      {/* FAB - Ajustado bottom para não bater na navbar */}
+      <TouchableOpacity style={styles.fabContainer} activeOpacity={0.7}>
+        <BlurView intensity={30} tint="light" style={styles.fabBlur}>
+          <LinearGradient
+            colors={["rgba(168, 85, 247, 0.4)", "rgba(126, 34, 206, 0.2)"]}
+            style={styles.fabGradient}
+          >
+            <Ionicons name="add" size={32} color="white" />
+          </LinearGradient>
+        </BlurView>
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    backgroundColor: "#050510",
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  logoContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 10,
+    paddingBottom: 5,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  headerTabs: {
+    flexDirection: "row",
+    justifyContent: "center",
+    paddingBottom: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.05)",
+  },
+  tabButton: {
+    marginHorizontal: 15,
+    paddingBottom: 10,
+    borderBottomWidth: 3,
+    borderBottomColor: "transparent",
+  },
+  activeTabBorder: {
+    borderBottomColor: "#a855f7",
+  },
+  tabLabel: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  activeText: {
+    color: "white",
+  },
+  inactiveText: {
+    color: "#6b7280",
+  },
+  feedWrapper: {
+    flex: 1,
+  },
+  fabContainer: {
+    position: "absolute",
+    right: 25,
+    bottom: 110, // Subi o botão para ficar acima da barra de navegação
+    borderRadius: 30,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+    zIndex: 99,
+    shadowColor: "#a855f7",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  fabBlur: {
+    width: 60,
+    height: 60,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  fabGradient: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
