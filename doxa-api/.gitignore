@@ -1,17 +1,33 @@
-# Gradle arquivos temporários
-.gradle/
-build/
+# Maven - Arquivos de Build
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.nextReleaseBackup
+pom.xml.versionsBackup
+release.properties
 
-# IntelliJ IDEA (Arquivos de configuração pessoal)
+# Spring Boot
+*.jar
+*.war
+*.ear
+.mvn/wrapper/maven-wrapper.jar
+
+# Logs e Arquivos Temporários
+*.log
+logs/
+temp/
+
+# IntelliJ IDEA
 .idea/
 *.iml
 *.iws
 *.ipr
+out/
+
+# Gradle (Mantemos por segurança se ainda houver resquícios)
+.gradle/
+build/
 
 # Sistema Operacional
 .DS_Store
 Thumbs.db
-
-# Java/Kotlin
-*.class
-*.log
