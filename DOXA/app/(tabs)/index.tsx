@@ -11,8 +11,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 
+// Componentes de Feed
 import { RecommendedFeed } from "@/components/RecommendedFeed";
 import { FollowingFeed } from "@/components/FollowingFeed";
+// Componente de Botão Animado
+import { ExpandableFAB } from "@/components/ExpandableFAB";
 
 export default function FeedScreen() {
   const [activeTab, setActiveTab] = useState<"recommended" | "following">(
@@ -23,16 +26,20 @@ export default function FeedScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
+      {/* Background com gradiente Dark/Glitch */}
       <LinearGradient
         colors={["#050510", "#050510", "#170326"]}
         style={StyleSheet.absoluteFill}
       />
 
       <SafeAreaView style={{ flex: 1 }}>
-        {/* APP LOGO SECTION */}
+        {/* APP LOGO SECTION - Glassmorphism style */}
         <View style={styles.logoContainer}>
-          <Ionicons name="terminal" size={32} color="#a855f7" />
-          {/* Se tiver uma imagem: <Image source={require('@/assets/logo.png')} style={styles.logo} /> */}
+          <View style={styles.logoGlass}>
+            <BlurView intensity={20} tint="light" style={styles.logoBlur}>
+              <Ionicons name="terminal" size={28} color="#a855f7" />
+            </BlurView>
+          </View>
         </View>
 
         {/* TOP TABS NAVIGATION */}
@@ -76,6 +83,7 @@ export default function FeedScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* FEED CONTENT - display:none usado para preservar o estado do scroll */}
         <View style={styles.feedWrapper}>
           <View
             style={{
@@ -97,17 +105,8 @@ export default function FeedScreen() {
         </View>
       </SafeAreaView>
 
-      {/* FAB - Ajustado bottom para não bater na navbar */}
-      <TouchableOpacity style={styles.fabContainer} activeOpacity={0.7}>
-        <BlurView intensity={30} tint="light" style={styles.fabBlur}>
-          <LinearGradient
-            colors={["rgba(168, 85, 247, 0.4)", "rgba(126, 34, 206, 0.2)"]}
-            style={styles.fabGradient}
-          >
-            <Ionicons name="add" size={32} color="white" />
-          </LinearGradient>
-        </BlurView>
-      </TouchableOpacity>
+      {/* FAB ANIMADO COM OPÇÕES (Post e Community) */}
+      <ExpandableFAB />
     </View>
   );
 }
@@ -121,7 +120,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingTop: 10,
-    paddingBottom: 5,
+    paddingBottom: 15,
+  },
+  logoGlass: {
+    borderRadius: 12,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+  },
+  logoBlur: {
+    padding: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerTabs: {
     flexDirection: "row",
@@ -151,32 +161,5 @@ const styles = StyleSheet.create({
   },
   feedWrapper: {
     flex: 1,
-  },
-  fabContainer: {
-    position: "absolute",
-    right: 25,
-    bottom: 110, // Subi o botão para ficar acima da barra de navegação
-    borderRadius: 30,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-    zIndex: 99,
-    shadowColor: "#a855f7",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 15,
-    elevation: 10,
-  },
-  fabBlur: {
-    width: 60,
-    height: 60,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  fabGradient: {
-    width: "100%",
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
   },
 });

@@ -1,11 +1,29 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Pressable,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
+import { useRouter } from "expo-router";
 
 export function PostCard({ item }: { item: any }) {
+  const router = useRouter();
+  const [votes, setVotes] = useState(item.votes);
+  const [voted, setVoted] = useState(false);
+
   return (
-    <View style={styles.container}>
+    <Pressable
+      onPress={() => router.push(`/post/${item.id}` as any)}
+      style={({ pressed }) => [
+        styles.container,
+        pressed && styles.containerPressed,
+      ]}
+    >
       <BlurView intensity={15} tint="dark" style={styles.glassCard}>
         <View style={styles.header}>
           <View style={styles.subjectContainer}>
@@ -22,7 +40,7 @@ export function PostCard({ item }: { item: any }) {
         <Text style={styles.title}>{item.title}</Text>
 
         {item.description && (
-          <Text style={styles.description} numberOfLines={3}>
+          <Text style={styles.description} numberOfLines={2}>
             {item.description}
           </Text>
         )}
@@ -44,9 +62,23 @@ export function PostCard({ item }: { item: any }) {
 
         <View style={styles.actions}>
           <View style={styles.leftActions}>
-            <TouchableOpacity style={styles.voteBtn}>
-              <Ionicons name="chevron-up" size={20} color="white" />
-              <Text style={styles.actionText}>{item.votes}</Text>
+            <TouchableOpacity
+              style={[styles.voteBtn, voted && styles.voteBtnActive]}
+              onPress={() => {
+                if (voted) {
+                  setVotes((v: number) => v - 1);
+                } else {
+                  setVotes((v: number) => v + 1);
+                }
+                setVoted(!voted);
+              }}
+            >
+              <Ionicons
+                name={voted ? "chevron-up" : "chevron-up-outline"}
+                size={20}
+                color="white"
+              />
+              <Text style={styles.actionText}>{votes}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.commentBtn}>
@@ -54,14 +86,9 @@ export function PostCard({ item }: { item: any }) {
               <Text style={styles.actionText}>{item.comments}</Text>
             </TouchableOpacity>
           </View>
-
-          <TouchableOpacity style={styles.openBtn}>
-            <Ionicons name="book-outline" size={18} color="white" />
-            <Text style={styles.actionText}>Abrir</Text>
-          </TouchableOpacity>
         </View>
       </BlurView>
-    </View>
+    </Pressable>
   );
 }
 
@@ -73,6 +100,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.12)",
+  },
+  containerPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.985 }],
   },
   glassCard: {
     padding: 18,
@@ -142,7 +173,6 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
   },
   leftActions: {
@@ -157,19 +187,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
   },
+  voteBtnActive: {
+    backgroundColor: "#9333ea",
+  },
   commentBtn: {
     flexDirection: "row",
     backgroundColor: "rgba(255, 255, 255, 0.1)",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  openBtn: {
-    flexDirection: "row",
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.15)",
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 10,
