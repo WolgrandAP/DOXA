@@ -15,8 +15,8 @@ class PostController(
     @GetMapping
     fun getAllPosts(): List<Post> = postService.getAllPosts()
 
-    @GetMapping("/community/{subject}")
-    fun getPostsByCommunity(@PathVariable subject: String): List<Post> {
+    @GetMapping("/subject/{subject}")
+    fun getPostsBySubject(@PathVariable subject: String): List<Post> {
         return postService.getPostsBySubject(subject)
     }
 

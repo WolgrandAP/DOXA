@@ -10,8 +10,12 @@ data class User(
 
     @Column(unique = true, nullable = false)
     var username: String = "",
+
     @Column(unique = true, nullable = false)
     var email: String = "",
+
     var password: String = "",
+
+    @OneToMany(mappedBy = "author", cascade = [CascadeType.ALL])
     var postsList: List<Post> = mutableListOf()
 )
