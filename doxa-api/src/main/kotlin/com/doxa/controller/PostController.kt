@@ -1,18 +1,37 @@
 package com.doxa.controller
 
 import com.doxa.models.Post
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import com.doxa.service.PostService
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/api/posts")
-class PostController {
+class PostController(
+    private val postService: PostService
+) {
 
-    @GetMapping("/recommended")
-    fun getRecommended(): List<Post> {
-        return listOf(
-            Post("1", "d://conquistas", "#vida", "Emprego na gringa!", "Estudando ADS...", "User99", "OP", "2 h", 1240, 156, null)
-        )
+    @GetMapping
+    fun getAllPosts(): List<Post> = postService.getAllPosts()
+
+    @GetMapping("/community/{subject}")
+    fun getPostsByCommunity(@PathVariable subject: String): List<Post> {
+        return postService.getPostsBySubject(subject)
+    }
+
+    @GetMapping("/tag/{tagName}")
+    fun getPostsByTag(@PathVariable tagName: String): List<Post> {
+        return postService.getPostsByTag(tagName)
+    }
+
+    @PostMapping
+    fun createPost(@RequestBody post: Post): ResponseEntity<Post> {
+        return try {
+            val newPost = postService.createPost(post)
+            ResponseEntity.status(HttpStatus.CREATED).body(newPost)
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.BAD_REQUEST).build()
+        }
     }
 }

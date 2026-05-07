@@ -14,7 +14,7 @@ class PostService(
         return postRepository.findAll()
     }
 
-    fun getPostBySubject(subject: String): List<Post> {
+    fun getPostsBySubject(subject: String): List<Post> {
         return postRepository.findBySubject(subject)
     }
 
