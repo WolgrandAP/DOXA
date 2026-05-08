@@ -12,11 +12,13 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 
 const AVAILABLE_TOPICS = [
   "Filosofia",
@@ -59,6 +61,20 @@ export default function CreateCommunityScreen() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null);
+
+  const pickBanner = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0].uri) {
+      setBannerUrl(result.assets[0].uri);
+    }
+  };
 
   const isFormValid =
     name.trim().length > 0 &&
@@ -149,6 +165,25 @@ export default function CreateCommunityScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
+            {/* ─── Banner ─── */}
+            <TouchableOpacity
+              style={styles.bannerContainer}
+              activeOpacity={0.8}
+              onPress={pickBanner}
+            >
+              {bannerUrl ? (
+                <Image source={{ uri: bannerUrl }} style={styles.bannerImage} />
+              ) : (
+                <View style={styles.bannerPlaceholder}>
+                  <Ionicons name="image-outline" size={32} color="rgba(255,255,255,0.4)" />
+                  <Text style={styles.bannerPlaceholderText}>Adicionar Banner</Text>
+                </View>
+              )}
+              <View style={styles.imageOverlay}>
+                <Ionicons name="camera-outline" size={24} color="rgba(255,255,255,0.6)" />
+              </View>
+            </TouchableOpacity>
+
             {/* ─── Glass Card: Nome & Descrição ─── */}
             <View style={styles.cardOuter}>
               <BlurView intensity={15} tint="dark" style={styles.glassCard}>
@@ -318,6 +353,42 @@ const styles = StyleSheet.create({
   // ── Scroll ──
   scrollContent: {
     paddingBottom: 120,
+  },
+
+  // ── Banner ──
+  bannerContainer: {
+    height: 120,
+    marginHorizontal: 16,
+    marginTop: 5,
+    marginBottom: 15,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.12)",
+    position: "relative",
+  },
+  bannerImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  bannerPlaceholder: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  bannerPlaceholderText: {
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 14,
+    marginTop: 8,
+    fontWeight: "600",
+  },
+  imageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.1)",
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   // ── Glass Card ──

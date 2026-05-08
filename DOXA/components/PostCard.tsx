@@ -12,11 +12,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
 
-export function PostCard({ item }: { item: any }) {
+export function PostCard({ item, initialSaved = false }: { item: any; initialSaved?: boolean }) {
   const router = useRouter();
   const [votes, setVotes] = useState(item.votes);
   const [voted, setVoted] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
+  const [isSaved, setIsSaved] = useState(initialSaved);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handleLike = () => {
