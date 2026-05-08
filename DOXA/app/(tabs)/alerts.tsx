@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   StatusBar,
 } from "react-native";
-import { Swipeable, TouchableOpacity as GHTouchableOpacity } from "react-native-gesture-handler";
+import { Swipeable, RectButton } from "react-native-gesture-handler";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -138,12 +138,12 @@ export default function AlertsPage() {
 
   const renderRightActions = (id: string) => {
     return (
-      <GHTouchableOpacity
+      <RectButton
         style={styles.deleteAction}
         onPress={() => deleteNotification(id)}
       >
         <Ionicons name="trash-outline" size={24} color="white" />
-      </GHTouchableOpacity>
+      </RectButton>
     );
   };
 
@@ -152,11 +152,14 @@ export default function AlertsPage() {
 
     return (
       <Swipeable
+        key={item.id}
         renderRightActions={() => renderRightActions(item.id)}
         overshootRight={false}
+        containerStyle={styles.swipeableContainer}
       >
         <TouchableOpacity
           onPress={() => markAsRead(item.id)}
+          activeOpacity={0.7}
           style={[
             styles.notificationCard,
             !item.isRead && styles.unreadCard
@@ -298,7 +301,8 @@ const styles = StyleSheet.create({
     paddingRight: 25,
     width: 100,
     height: "100%",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.03)",
+  },
+  swipeableContainer: {
+    backgroundColor: "#050510",
   },
 });
