@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Image,
   Pressable,
+  Animated,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
@@ -15,6 +16,29 @@ export function PostCard({ item }: { item: any }) {
   const router = useRouter();
   const [votes, setVotes] = useState(item.votes);
   const [voted, setVoted] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handleLike = () => {
+    if (!voted) {
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1.4,
+          duration: 100,
+          useNativeDriver: false,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 4,
+          useNativeDriver: false,
+        }),
+      ]).start();
+      setVotes((v: number) => v + 1);
+    } else {
+      setVotes((v: number) => v - 1);
+    }
+    setVoted(!voted);
+  };
 
   return (
     <Pressable
@@ -32,8 +56,18 @@ export function PostCard({ item }: { item: any }) {
               <Text style={styles.tagText}>{item.tag}</Text>
             </View>
           </View>
-          <TouchableOpacity hitSlop={10}>
-            <Ionicons name="bookmark-outline" size={20} color="#fff" />
+          <TouchableOpacity
+            hitSlop={10}
+            onPress={(e) => {
+              e.stopPropagation?.();
+              setIsSaved(!isSaved);
+            }}
+          >
+            <Ionicons
+              name={isSaved ? "bookmark" : "bookmark-outline"}
+              size={20}
+              color={isSaved ? "#ffffff" : "#fff"}
+            />
           </TouchableOpacity>
         </View>
 
@@ -64,20 +98,18 @@ export function PostCard({ item }: { item: any }) {
           <View style={styles.leftActions}>
             <TouchableOpacity
               style={[styles.voteBtn, voted && styles.voteBtnActive]}
-              onPress={() => {
-                if (voted) {
-                  setVotes((v: number) => v - 1);
-                } else {
-                  setVotes((v: number) => v + 1);
-                }
-                setVoted(!voted);
+              onPress={(e) => {
+                e.stopPropagation?.();
+                handleLike();
               }}
             >
-              <Ionicons
-                name={voted ? "chevron-up" : "chevron-up-outline"}
-                size={20}
-                color="white"
-              />
+              <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                <Ionicons
+                  name={voted ? "heart" : "heart-outline"}
+                  size={20}
+                  color={voted ? "#ef4444" : "white"}
+                />
+              </Animated.View>
               <Text style={styles.actionText}>{votes}</Text>
             </TouchableOpacity>
 
@@ -182,10 +214,11 @@ const styles = StyleSheet.create({
   voteBtn: {
     flexDirection: "row",
     backgroundColor: "#7e22ce",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
     borderRadius: 10,
     alignItems: "center",
+    justifyContent: "center",
+    width: 85,
+    height: 40,
   },
   voteBtnActive: {
     backgroundColor: "#9333ea",

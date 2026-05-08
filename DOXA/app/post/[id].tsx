@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   StyleSheet,
@@ -13,6 +13,7 @@ import {
   Platform,
   Modal,
   Pressable,
+  Animated,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
@@ -21,6 +22,154 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { MOCK_DATA, MOCK_FOLLOWING, Post } from "@/constants/posts";
 
 const ALL_POSTS = [...MOCK_DATA, ...MOCK_FOLLOWING];
+
+const MOCK_COMMENTS_BY_POST: Record<string, any[]> = {
+  "1": [
+    {
+      id: "c1-1",
+      author: "DevSenior",
+      avatar: "https://i.pravatar.cc/150?u=dev",
+      text: "Parabéns, cara! O primeiro é o mais difícil. Agora é só focar em entregar valor e curtir os dólares.",
+      time: "1h atrás",
+      likes: 45,
+      isLiked: false,
+      replies: [
+        {
+          id: "c1-1-1",
+          author: "User99",
+          avatar: "https://i.pravatar.cc/150?u=u99",
+          text: "Valeu demais! Ainda tô tremendo aqui kkkk",
+          time: "30min atrás",
+          likes: 12,
+          isLiked: false,
+        },
+      ],
+    },
+    {
+      id: "c1-2",
+      author: "EnglishMaster",
+      avatar: "https://i.pravatar.cc/150?u=eng",
+      text: "Dica: não pare de estudar inglês. No dia a dia das reuniões o bicho pega no começo.",
+      time: "2h atrás",
+      likes: 8,
+      isLiked: false,
+      replies: [],
+    },
+  ],
+  "2": [
+    {
+      id: "c2-1",
+      author: "RecrutadorSincero",
+      avatar: "https://i.pravatar.cc/150?u=rec",
+      text: "Infelizmente o mercado saturou de gente que só fez curso de 6 meses. O sarrafo subiu pra filtrar quem realmente sabe a base.",
+      time: "3h atrás",
+      likes: 89,
+      isLiked: false,
+      replies: [
+        {
+          id: "c2-1-1",
+          author: "JhowDev",
+          avatar: "https://i.pravatar.cc/150?u=jhow",
+          text: "Mas pedir Kubernetes pra Júnior é sacanagem, né?",
+          time: "2h atrás",
+          likes: 120,
+          isLiked: true,
+        },
+      ],
+    },
+  ],
+  "3": [
+    {
+      id: "c3-1",
+      author: "MembroDoSub",
+      avatar: "https://i.pravatar.cc/150?u=sub",
+      text: "Bem-vindo ao clube. Perdi 10k em Luna e hoje vendo bolo de pote.",
+      time: "10min atrás",
+      likes: 156,
+      isLiked: false,
+      replies: [],
+    },
+    {
+      id: "c3-2",
+      author: "CoachFinanceiro",
+      avatar: "https://i.pravatar.cc/150?u=coach",
+      text: "O erro foi não ter diversificado em rinha de galo.",
+      time: "5min atrás",
+      likes: 42,
+      isLiked: false,
+      replies: [],
+    },
+  ],
+  "4": [
+    {
+      id: "c4-1",
+      author: "CJ_from_SA",
+      avatar: "https://i.pravatar.cc/150?u=cj",
+      text: "Ah shit, here we go again. Vou ter que comprar um PS5 só pra isso.",
+      time: "2min atrás",
+      likes: 2400,
+      isLiked: false,
+      replies: [
+        {
+          id: "c4-1-1",
+          author: "GamerBr",
+          avatar: "https://i.pravatar.cc/150?u=br",
+          text: "Até lá já saiu o PS6 kkkkk",
+          time: "1min atrás",
+          likes: 450,
+          isLiked: false,
+        },
+      ],
+    },
+  ],
+  "6": [
+    {
+      id: "c6-1",
+      author: "IsaacAsimov",
+      avatar: "https://i.pravatar.cc/150?u=isaac",
+      text: "As três leis da robótica mandaram um abraço.",
+      time: "5h atrás",
+      likes: 120,
+      isLiked: false,
+      replies: [],
+    },
+  ],
+  "10": [
+    {
+      id: "c10-1",
+      author: "HansZimmerFan",
+      avatar: "https://i.pravatar.cc/150?u=hans",
+      text: "S.T.A.Y. 😭 Aquela cena na biblioteca destrói qualquer um.",
+      time: "1h atrás",
+      likes: 340,
+      isLiked: true,
+      replies: [
+        {
+          id: "c10-1-1",
+          author: "Cinefilo",
+          avatar: "https://i.pravatar.cc/150?u=cine",
+          text: "Don't let me leave, Murph!",
+          time: "30min atrás",
+          likes: 89,
+          isLiked: false,
+        },
+      ],
+    },
+  ],
+  "12": [
+    {
+      id: "c12-1",
+      author: "EnergiaSP",
+      avatar: "https://i.pravatar.cc/150?u=luz",
+      text: "Obrigado pela preferência, sua conta de luz agradece.",
+      time: "1d atrás",
+      likes: 560,
+      isLiked: false,
+      replies: [],
+    },
+  ],
+  // Posts sem comentários propositais: "5", "7", "9" etc.
+};
 
 export default function PostDetailScreen() {
   const router = useRouter();
@@ -32,6 +181,86 @@ export default function PostDetailScreen() {
   const [voted, setVoted] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [comments, setComments] = useState<any[]>([]);
+  const [isSaved, setIsSaved] = useState(false);
+
+  // Carrega os comentários específicos do post ao entrar na tela
+  React.useEffect(() => {
+    if (id) {
+      setComments(MOCK_COMMENTS_BY_POST[id] || []);
+    }
+  }, [id]);
+
+  const shareAnimation = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handleLike = () => {
+    if (!voted) {
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1.4,
+          duration: 100,
+          useNativeDriver: false,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 4,
+          useNativeDriver: false,
+        }),
+      ]).start();
+      setVotes((v) => v + 1);
+    } else {
+      setVotes((v) => v - 1);
+    }
+    setVoted(!voted);
+  };
+
+  const handleLikeComment = (commentId: string, replyId?: string) => {
+    setComments((prev) =>
+      prev.map((c) => {
+        if (c.id === commentId) {
+          if (replyId) {
+            return {
+              ...c,
+              replies: c.replies.map((r: any) =>
+                r.id === replyId
+                  ? {
+                      ...r,
+                      isLiked: !r.isLiked,
+                      likes: r.isLiked ? r.likes - 1 : r.likes + 1,
+                    }
+                  : r,
+              ),
+            };
+          }
+          return {
+            ...c,
+            isLiked: !c.isLiked,
+            likes: c.isLiked ? c.likes - 1 : c.likes + 1,
+          };
+        }
+        return c;
+      }),
+    );
+  };
+
+  const toggleShareModal = (visible: boolean) => {
+    if (visible) {
+      setShareModalVisible(true);
+      Animated.timing(shareAnimation, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(shareAnimation, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }).start(() => setShareModalVisible(false));
+    }
+  };
 
   if (!post) {
     return (
@@ -66,187 +295,363 @@ export default function PostDetailScreen() {
           style={{ flex: 1 }}
           keyboardVerticalOffset={10}
         >
-        {/* ─── HEADER ─── */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
+          {/* ─── HEADER ─── */}
+          <View style={styles.header}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.backButton}
+            >
+              <BlurView intensity={20} tint="dark" style={styles.backBlur}>
+                <Ionicons name="arrow-back" size={22} color="#e9d5ff" />
+              </BlurView>
+            </TouchableOpacity>
+
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {post.subject}
+            </Text>
+
+            <TouchableOpacity
+              style={styles.backButton}
+              hitSlop={10}
+              onPress={() => setIsSaved(!isSaved)}
+            >
+              <BlurView intensity={20} tint="dark" style={styles.backBlur}>
+                <Ionicons
+                  name={isSaved ? "bookmark" : "bookmark-outline"}
+                  size={20}
+                  color={isSaved ? "#ffffff" : "#e9d5ff"}
+                />
+              </BlurView>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
           >
-            <BlurView intensity={20} tint="dark" style={styles.backBlur}>
-              <Ionicons name="arrow-back" size={22} color="#e9d5ff" />
-            </BlurView>
-          </TouchableOpacity>
-
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {post.subject}
-          </Text>
-
-          <TouchableOpacity style={styles.backButton} hitSlop={10}>
-            <BlurView intensity={20} tint="dark" style={styles.backBlur}>
-              <Ionicons name="bookmark-outline" size={20} color="#e9d5ff" />
-            </BlurView>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* ─── POST CONTENT ─── */}
-          <View style={styles.postCardOuter}>
-            <BlurView intensity={15} tint="dark" style={styles.postCard}>
-              {/* Subject & Tag */}
-              <View style={styles.subjectRow}>
-                <View style={styles.subjectContainer}>
-                  <Text style={styles.subject}>{post.subject}</Text>
-                  <View style={styles.tagBadge}>
-                    <Text style={styles.tagText}>{post.tag}</Text>
+            {/* ─── POST CONTENT ─── */}
+            <View style={styles.postCardOuter}>
+              <BlurView intensity={15} tint="dark" style={styles.postCard}>
+                {/* Subject & Tag */}
+                <View style={styles.subjectRow}>
+                  <View style={styles.subjectContainer}>
+                    <Text style={styles.subject}>{post.subject}</Text>
+                    <View style={styles.tagBadge}>
+                      <Text style={styles.tagText}>{post.tag}</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
 
-              {/* Title */}
-              <Text style={styles.postTitle}>{post.title}</Text>
+                {/* Title */}
+                <Text style={styles.postTitle}>{post.title}</Text>
 
-              {/* Description (full, no line limit) */}
-              {post.description && (
-                <Text style={styles.postDescription}>{post.description}</Text>
-              )}
+                {/* Description (full, no line limit) */}
+                {post.description && (
+                  <Text style={styles.postDescription}>{post.description}</Text>
+                )}
 
-              {/* Image */}
-              {post.imageUrl && (
-                <TouchableOpacity
-                  activeOpacity={0.9}
-                  onPress={() => setImageModalVisible(true)}
-                  style={styles.imageContainer}
-                >
-                  <Image
-                    source={{ uri: post.imageUrl }}
-                    style={styles.postImage}
-                    resizeMode="contain"
-                  />
-                  <View style={styles.imageOverlay} />
-                </TouchableOpacity>
-              )}
-
-              {/* Author Info */}
-              <Text style={styles.authorInfo}>
-                {post.author} • {post.role} • {post.time}
-              </Text>
-
-              {/* Actions */}
-              <View style={styles.actions}>
-                <View style={styles.leftActions}>
+                {/* Image */}
+                {post.imageUrl && (
                   <TouchableOpacity
-                    style={[styles.voteBtn, voted && styles.voteBtnActive]}
-                    onPress={() => {
-                      if (voted) {
-                        setVotes((v) => v - 1);
-                      } else {
-                        setVotes((v) => v + 1);
-                      }
-                      setVoted(!voted);
-                    }}
+                    activeOpacity={0.9}
+                    onPress={() => setImageModalVisible(true)}
+                    style={styles.imageContainer}
+                  >
+                    <Image
+                      source={{ uri: post.imageUrl }}
+                      style={styles.postImage}
+                      resizeMode="contain"
+                    />
+                    <View style={styles.imageOverlay} />
+                  </TouchableOpacity>
+                )}
+
+                {/* Author Info */}
+                <Text style={styles.authorInfo}>
+                  {post.author} • {post.role} • {post.time}
+                </Text>
+
+                {/* Actions */}
+                <View style={styles.actions}>
+                  <View style={styles.leftActions}>
+                    <TouchableOpacity
+                      style={[styles.voteBtn, voted && styles.voteBtnActive]}
+                      onPress={handleLike}
+                    >
+                      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                        <Ionicons
+                          name={voted ? "heart" : "heart-outline"}
+                          size={20}
+                          color={voted ? "#ef4444" : "white"}
+                        />
+                      </Animated.View>
+                      <Text style={styles.actionText}>{votes}</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.commentBtn}>
+                      <Ionicons
+                        name="chatbubble-outline"
+                        size={18}
+                        color="white"
+                      />
+                      <Text style={styles.actionText}>{post.comments}</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.shareBtn}
+                    onPress={() => toggleShareModal(true)}
                   >
                     <Ionicons
-                      name={voted ? "chevron-up" : "chevron-up-outline"}
-                      size={20}
-                      color="white"
-                    />
-                    <Text style={styles.actionText}>{votes}</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity style={styles.commentBtn}>
-                    <Ionicons
-                      name="chatbubble-outline"
+                      name="share-social-outline"
                       size={18}
                       color="white"
                     />
-                    <Text style={styles.actionText}>{post.comments}</Text>
+                    <Text style={styles.actionText}>Compartilhar</Text>
                   </TouchableOpacity>
                 </View>
-
-                <TouchableOpacity style={styles.shareBtn}>
-                  <Ionicons
-                    name="share-social-outline"
-                    size={18}
-                    color="white"
-                  />
-                  <Text style={styles.actionText}>Compartilhar</Text>
-                </TouchableOpacity>
-              </View>
-            </BlurView>
-          </View>
-
-          {/* ─── COMMENTS SECTION ─── */}
-          <View style={styles.commentsSection}>
-            <View style={styles.commentsTitleRow}>
-              <Ionicons name="chatbubbles-outline" size={18} color="#c084fc" />
-              <Text style={styles.commentsSectionTitle}>Comentários</Text>
-            </View>
-
-            {/* Empty state */}
-            <View style={styles.emptyCommentsOuter}>
-              <BlurView
-                intensity={15}
-                tint="dark"
-                style={styles.emptyCommentsCard}
-              >
-                <Ionicons
-                  name="chatbubble-ellipses-outline"
-                  size={40}
-                  color="rgba(255,255,255,0.15)"
-                />
-                <Text style={styles.emptyCommentsTitle}>
-                  Nenhum comentário ainda
-                </Text>
-                <Text style={styles.emptyCommentsSubtitle}>
-                  Seja o primeiro a comentar neste post
-                </Text>
               </BlurView>
             </View>
-          </View>
-        </ScrollView>
 
-        {/* ─── COMMENT INPUT BAR ─── */}
-        <View style={styles.commentBarOuter}>
-          <BlurView intensity={30} tint="dark" style={styles.commentBar}>
-            <View style={styles.commentInputWrapper}>
-              <Ionicons
-                name="chatbubble-outline"
-                size={18}
-                color="rgba(255,255,255,0.3)"
-              />
-              <TextInput
-                style={styles.commentInput}
-                placeholder="Escreva um comentário..."
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                value={commentText}
-                onChangeText={setCommentText}
-                multiline
-                maxLength={500}
-              />
+            {/* ─── COMMENTS SECTION ─── */}
+            <View style={styles.commentsSection}>
+              <View style={styles.commentsTitleRow}>
+                <Ionicons
+                  name="chatbubbles-outline"
+                  size={18}
+                  color="#c084fc"
+                />
+                <Text style={styles.commentsSectionTitle}>Comentários</Text>
+              </View>
+
+              {/* Empty state */}
+              {comments.length === 0 && (
+                <View style={styles.emptyCommentsOuter}>
+                  <BlurView
+                    intensity={15}
+                    tint="dark"
+                    style={styles.emptyCommentsCard}
+                  >
+                    <Ionicons
+                      name="chatbubble-ellipses-outline"
+                      size={40}
+                      color="rgba(255,255,255,0.15)"
+                    />
+                    <Text style={styles.emptyCommentsTitle}>
+                      Nenhum comentário ainda
+                    </Text>
+                    <Text style={styles.emptyCommentsSubtitle}>
+                      Seja o primeiro a comentar neste post
+                    </Text>
+                  </BlurView>
+                </View>
+              )}
+
+              {/* List of comments */}
+              <View style={styles.commentsList}>
+                {comments.map((comment) => (
+                  <View key={comment.id} style={styles.commentContainer}>
+                    <View style={styles.commentItemOuter}>
+                      <BlurView
+                        intensity={10}
+                        tint="dark"
+                        style={styles.commentItem}
+                      >
+                        <View style={styles.commentHeader}>
+                          <Image
+                            source={{ uri: comment.avatar }}
+                            style={styles.commentAvatar}
+                          />
+                          <View style={styles.commentInfo}>
+                            <View style={styles.commentAuthorRow}>
+                              <Text style={styles.commentAuthor}>
+                                {comment.author}
+                              </Text>
+                              <Text style={styles.commentTime}>
+                                {comment.time}
+                              </Text>
+                            </View>
+                            <Text style={styles.commentText}>
+                              {comment.text}
+                            </Text>
+
+                            <View style={styles.commentActions}>
+                              <TouchableOpacity
+                                style={styles.commentActionBtn}
+                                onPress={() => handleLikeComment(comment.id)}
+                              >
+                                <Ionicons
+                                  name={
+                                    comment.isLiked ? "heart" : "heart-outline"
+                                  }
+                                  size={14}
+                                  color={
+                                    comment.isLiked
+                                      ? "#ef4444"
+                                      : "rgba(255,255,255,0.4)"
+                                  }
+                                />
+                                <Text
+                                  style={[
+                                    styles.commentActionText,
+                                    comment.isLiked &&
+                                      styles.commentActionTextActive,
+                                  ]}
+                                >
+                                  {comment.likes}
+                                </Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity style={styles.commentActionBtn}>
+                                <Ionicons
+                                  name="chatbubble-outline"
+                                  size={14}
+                                  color="rgba(255,255,255,0.4)"
+                                />
+                                <Text style={styles.commentActionText}>
+                                  Responder
+                                </Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        </View>
+                      </BlurView>
+                    </View>
+
+                    {/* Replies Rendering */}
+                    {comment.replies.length > 0 && (
+                      <View style={styles.repliesContainer}>
+                        <View style={styles.replyLine} />
+                        <View style={{ flex: 1, gap: 10 }}>
+                          {comment.replies.map((reply: any) => (
+                            <View
+                              key={reply.id}
+                              style={styles.commentItemOuter}
+                            >
+                              <BlurView
+                                intensity={5}
+                                tint="dark"
+                                style={[styles.commentItem, styles.replyItem]}
+                              >
+                                <View style={styles.commentHeader}>
+                                  <Image
+                                    source={{ uri: reply.avatar }}
+                                    style={[
+                                      styles.commentAvatar,
+                                      styles.replyAvatar,
+                                    ]}
+                                  />
+                                  <View style={styles.commentInfo}>
+                                    <View style={styles.commentAuthorRow}>
+                                      <Text style={styles.commentAuthor}>
+                                        {reply.author}
+                                      </Text>
+                                      <Text style={styles.commentTime}>
+                                        {reply.time}
+                                      </Text>
+                                    </View>
+                                    <Text style={styles.commentText}>
+                                      {reply.text}
+                                    </Text>
+
+                                    <View style={styles.commentActions}>
+                                      <TouchableOpacity
+                                        style={styles.commentActionBtn}
+                                        onPress={() =>
+                                          handleLikeComment(
+                                            comment.id,
+                                            reply.id,
+                                          )
+                                        }
+                                      >
+                                        <Ionicons
+                                          name={
+                                            reply.isLiked
+                                              ? "heart"
+                                              : "heart-outline"
+                                          }
+                                          size={14}
+                                          color={
+                                            reply.isLiked
+                                              ? "#ef4444"
+                                              : "rgba(255,255,255,0.4)"
+                                          }
+                                        />
+                                        <Text
+                                          style={[
+                                            styles.commentActionText,
+                                            reply.isLiked &&
+                                              styles.commentActionTextActive,
+                                          ]}
+                                        >
+                                          {reply.likes}
+                                        </Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                          style={styles.commentActionBtn}
+                                        >
+                                          <Ionicons
+                                            name="chatbubble-outline"
+                                            size={14}
+                                            color="rgba(255,255,255,0.4)"
+                                          />
+                                          <Text style={styles.commentActionText}>
+                                            Responder
+                                          </Text>
+                                        </TouchableOpacity>
+                                      </View>
+                                  </View>
+                                </View>
+                              </BlurView>
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                ))}
+              </View>
             </View>
-            <TouchableOpacity
-              style={[
-                styles.sendButton,
-                !commentText.trim() && styles.sendButtonDisabled,
-              ]}
-              disabled={!commentText.trim()}
-            >
-              <LinearGradient
-                colors={
-                  commentText.trim()
-                    ? ["#a855f7", "#7e22ce"]
-                    : ["rgba(168,85,247,0.3)", "rgba(126,34,206,0.15)"]
-                }
-                style={styles.sendGradient}
+          </ScrollView>
+
+          {/* ─── COMMENT INPUT BAR ─── */}
+          <View style={styles.commentBarOuter}>
+            <BlurView intensity={30} tint="dark" style={styles.commentBar}>
+              <View style={styles.commentInputWrapper}>
+                <Ionicons
+                  name="chatbubble-outline"
+                  size={18}
+                  color="rgba(255,255,255,0.3)"
+                />
+                <TextInput
+                  style={styles.commentInput}
+                  placeholder="Escreva um comentário..."
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  value={commentText}
+                  onChangeText={setCommentText}
+                  multiline
+                  maxLength={500}
+                />
+              </View>
+              <TouchableOpacity
+                style={[
+                  styles.sendButton,
+                  !commentText.trim() && styles.sendButtonDisabled,
+                ]}
+                disabled={!commentText.trim()}
               >
-                <Ionicons name="send" size={18} color="#fff" />
-              </LinearGradient>
-            </TouchableOpacity>
-          </BlurView>
-        </View>
+                <LinearGradient
+                  colors={
+                    commentText.trim()
+                      ? ["#a855f7", "#7e22ce"]
+                      : ["rgba(168,85,247,0.3)", "rgba(126,34,206,0.15)"]
+                  }
+                  style={styles.sendGradient}
+                >
+                  <Ionicons name="send" size={18} color="#fff" />
+                </LinearGradient>
+              </TouchableOpacity>
+            </BlurView>
+          </View>
         </KeyboardAvoidingView>
 
         {/* ─── FULLSCREEN IMAGE MODAL ─── */}
@@ -280,6 +685,119 @@ export default function PostDetailScreen() {
               />
             </Pressable>
           </Modal>
+        )}
+
+        {/* ─── SHARE BOTTOM SHEET MODAL (ANIMATED OVERLAY) ─── */}
+        {shareModalVisible && (
+          <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+            <Animated.View
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  opacity: shareAnimation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, 1],
+                  }),
+                },
+              ]}
+            >
+              <Pressable
+                style={styles.shareModalBackdrop}
+                onPress={() => toggleShareModal(false)}
+              >
+                <BlurView
+                  intensity={25}
+                  tint="dark"
+                  style={StyleSheet.absoluteFill}
+                />
+              </Pressable>
+            </Animated.View>
+
+            <Animated.View
+              style={[
+                styles.shareModalContent,
+                {
+                  transform: [
+                    {
+                      translateY: shareAnimation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [600, 0],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              <View style={styles.shareModalHandle} />
+
+              <Text style={styles.shareModalTitle}>Compartilhar via</Text>
+
+              <View style={styles.shareOptionsGrid}>
+                {/* Opção 1: Copiar Link */}
+                <TouchableOpacity style={styles.shareOptionBtn}>
+                  <View
+                    style={[
+                      styles.shareIconCircle,
+                      { backgroundColor: "#3b82f6" },
+                    ]}
+                  >
+                    <Ionicons name="link-outline" size={24} color="#fff" />
+                  </View>
+                  <Text style={styles.shareOptionText}>Copiar Link</Text>
+                </TouchableOpacity>
+
+                {/* Opção 2: WhatsApp */}
+                <TouchableOpacity style={styles.shareOptionBtn}>
+                  <View
+                    style={[
+                      styles.shareIconCircle,
+                      { backgroundColor: "#25D366" },
+                    ]}
+                  >
+                    <Ionicons name="logo-whatsapp" size={24} color="#fff" />
+                  </View>
+                  <Text style={styles.shareOptionText}>WhatsApp</Text>
+                </TouchableOpacity>
+
+                {/* Opção 3: Twitter/X */}
+                <TouchableOpacity style={styles.shareOptionBtn}>
+                  <View
+                    style={[
+                      styles.shareIconCircle,
+                      { backgroundColor: "#1DA1F2" },
+                    ]}
+                  >
+                    <Ionicons name="logo-twitter" size={24} color="#fff" />
+                  </View>
+                  <Text style={styles.shareOptionText}>Twitter</Text>
+                </TouchableOpacity>
+
+                {/* Opção 4: Mais Opções (Nativo) */}
+                <TouchableOpacity style={styles.shareOptionBtn}>
+                  <View
+                    style={[
+                      styles.shareIconCircle,
+                      { backgroundColor: "rgba(255,255,255,0.1)" },
+                    ]}
+                  >
+                    <Ionicons
+                      name="ellipsis-horizontal"
+                      size={24}
+                      color="#fff"
+                    />
+                  </View>
+                  <Text style={styles.shareOptionText}>Mais</Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                style={styles.shareCancelBtn}
+                onPress={() => toggleShareModal(false)}
+              >
+                <Text style={styles.shareCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
         )}
       </SafeAreaView>
     </View>
@@ -433,10 +951,11 @@ const styles = StyleSheet.create({
   voteBtn: {
     flexDirection: "row",
     backgroundColor: "#7e22ce",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
     borderRadius: 10,
     alignItems: "center",
+    justifyContent: "center",
+    width: 85,
+    height: 40,
   },
   voteBtnActive: {
     backgroundColor: "#9333ea",
@@ -582,5 +1101,163 @@ const styles = StyleSheet.create({
   modalImage: {
     width: "100%",
     height: "80%",
+  },
+
+  // ── Share Modal ──
+  shareModalBackdrop: {
+    flex: 1,
+    backgroundColor: "transparent",
+    justifyContent: "flex-end",
+  },
+  shareModalContent: {
+    backgroundColor: "#170326",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: Platform.OS === "ios" ? 40 : 24,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+  },
+  shareModalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+  shareModalTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 24,
+  },
+  shareOptionsGrid: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 30,
+  },
+  shareOptionBtn: {
+    alignItems: "center",
+    width: 70,
+  },
+  shareIconCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  shareOptionText: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 12,
+    textAlign: "center",
+  },
+  shareCancelBtn: {
+    backgroundColor: "rgba(255,255,255,0.05)",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  shareCancelText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+
+  // ── Comments List ──
+  commentsList: {
+    gap: 12,
+  },
+  commentItemOuter: {
+    borderRadius: 16,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+  },
+  commentItem: {
+    padding: 14,
+    backgroundColor: "rgba(255,255,255,0.02)",
+  },
+  commentHeader: {
+    flexDirection: "row",
+  },
+  commentAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  commentInfo: {
+    flex: 1,
+  },
+  commentAuthorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  commentAuthor: {
+    color: "#f3e8ff",
+    fontSize: 14,
+    fontWeight: "700",
+    marginRight: 8,
+  },
+  commentTime: {
+    color: "rgba(255,255,255,0.3)",
+    fontSize: 11,
+  },
+  commentText: {
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 10,
+  },
+  commentActions: {
+    flexDirection: "row",
+    gap: 16,
+  },
+  commentActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  commentActionText: {
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 12,
+  },
+  commentActionTextActive: {
+    color: "#ef4444",
+  },
+  commentContainer: {
+    marginBottom: 8,
+  },
+  repliesContainer: {
+    flexDirection: "row",
+    marginTop: 10,
+    marginLeft: 20,
+  },
+  replyLine: {
+    width: 2,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    marginRight: 15,
+    borderRadius: 1,
+    marginBottom: 10,
+  },
+  replyItem: {
+    padding: 10,
+  },
+  replyAvatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
   },
 });
