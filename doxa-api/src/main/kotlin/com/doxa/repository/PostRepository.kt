@@ -6,7 +6,7 @@ import org.springframework.stereotype.Repository
 
 @Repository
 interface PostRepository : JpaRepository<Post, String> {
-    fun findBySubject(subject: String): List<Post>
-
     fun findByTag(tag: String): List<Post>
+
+    fun findByCommunityName(communityName: String): List<Post>
 }

@@ -17,7 +17,7 @@ class PostController(
 
     @GetMapping("/subject/{subject}")
     fun getPostsBySubject(@PathVariable subject: String): List<Post> {
-        return postService.getPostsBySubject(subject)
+        return postService.getPostsByCommunity(subject)
     }
 
     @GetMapping("/tag/{tagName}")

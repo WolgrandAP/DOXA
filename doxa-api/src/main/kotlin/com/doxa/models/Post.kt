@@ -1,13 +1,19 @@
 package com.doxa.models
 
 import jakarta.persistence.*
+import com.fasterxml.jackson.annotation.JsonIgnore
 
 @Entity
 @Table(name = "posts")
-data class Post(
+class Post(
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     val id: String = "",
-    var subject: String = "",
+
+    @ManyToOne
+    @JoinColumn(name = "community_id")
+    var community: Community = Community(),
+
     var tag: String = "",
     var title: String = "",
 
@@ -22,8 +28,17 @@ data class Post(
     val time: String = "",
     var votes: Int = 0,
     var comments: Int = 0,
-    var imageUrl: String? = null,
-
+    var imageUrl: String? = null
+) {
     @OneToMany(mappedBy = "post", cascade = [CascadeType.ALL])
-    var commentsList: List<Comment> = mutableListOf()
-)
+    @JsonIgnore
+    var commentsList: MutableList<Comment> = mutableListOf()
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Post) return false
+        return id == other.id
+    }
+
+    override fun hashCode(): Int = id.hashCode()
+}
