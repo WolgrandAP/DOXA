@@ -17,9 +17,9 @@ import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
-import { PostCard } from "@/components/PostCard";
-import { MOCK_DATA, Post } from "@/constants/posts";
-import { MOCK_COMMUNITIES, Community } from "@/constants/communities";
+import { PostCard } from "../../components/PostCard";
+import { MOCK_DATA, Post } from "../../constants/posts";
+import { MOCK_COMMUNITIES, Community } from "../../constants/communities";
 
 const { width } = Dimensions.get("window");
 
@@ -30,7 +30,7 @@ export default function SearchScreen() {
   // Filtering logic
   const filteredPosts = useMemo(() => {
     if (!searchQuery.trim()) return [];
-    return MOCK_DATA.filter((post) =>
+    return MOCK_DATA.filter((post: Post) =>
       post.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [searchQuery]);
@@ -156,8 +156,8 @@ export default function SearchScreen() {
         ) : (
           <FlatList
             data={[
-              ...filteredCommunities.map((c) => ({ ...c, type: "community" })),
-              ...filteredPosts.map((p) => ({ ...p, type: "post" })),
+              ...filteredCommunities.map((c: Community) => ({ ...c, type: "community" })),
+              ...filteredPosts.map((p: Post) => ({ ...p, type: "post" })),
             ]}
             keyExtractor={(item) => `${item.type}-${item.id}`}
             contentContainerStyle={styles.resultsList}
