@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { useSQLiteContext } from 'expo-sqlite';
+import { useFocusEffect } from "expo-router";
 import {
   View,
   Text,
@@ -7,8 +8,6 @@ import {
   Image,
   FlatList,
   TouchableOpacity,
-  ScrollView,
-  SafeAreaView,
   Modal,
 } from "react-native";
 import { BlurView } from "expo-blur";
@@ -16,8 +15,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { PostCard } from "../../components/PostCard";
-import { MOCK_DATA } from "../../constants/posts";
 import { EditProfileModal } from "../../components/EditProfileModal";
+import { useDatabase } from "../../database/useDatabase";
 
 const INITIAL_USER = {
   name: "",
@@ -38,29 +37,32 @@ export default function ProfileScreen() {
   const [isAvatarModalVisible, setIsAvatarModalVisible] = useState(false);
   const [dbData, setDbData] = useState<any[]>([]);
   const db = useSQLiteContext();
+  const { getUserPosts, getSavedPosts } = useDatabase();
 
   async function loadProfile() {
     const userResult = await db.getFirstAsync<any>('SELECT * FROM users WHERE id = 1');
     if (userResult) setUser(userResult);
   }
 
-  useEffect(() => {
-    async function loadTabData() {
-      await loadProfile(); 
+  useFocusEffect(
+    useCallback(() => {
+      async function loadTabData() {
+        await loadProfile(); 
 
-      if (activeTab === "posts") {
-        const posts = await db.getAllAsync('SELECT * FROM posts WHERE user_id = 1');
-        setDbData(posts);
-      } else if (activeTab === "saved") {
-        const saved = await db.getAllAsync('SELECT * FROM posts WHERE is_saved = 1');
-        setDbData(saved);
-      } else if (activeTab === "communities") {
-        const comms = await db.getAllAsync('SELECT * FROM communities WHERE is_joined = 1');
-        setDbData(comms);
+        if (activeTab === "posts") {
+          const posts = await getUserPosts(1);
+          setDbData(posts);
+        } else if (activeTab === "saved") {
+          const saved = await getSavedPosts();
+          setDbData(saved);
+        } else if (activeTab === "communities") {
+          const comms = await db.getAllAsync('SELECT * FROM communities WHERE is_joined = 1');
+          setDbData(comms);
+        }
       }
-    }
-    loadTabData();
-  }, [activeTab]);
+      loadTabData();
+    }, [activeTab])
+  );
 
   const handleSaveProfile = async (updatedUser: typeof INITIAL_USER) => {
     try {
@@ -198,6 +200,7 @@ export default function ProfileScreen() {
         </View>
       </Modal>
     </View>
+    
   );
 }
 

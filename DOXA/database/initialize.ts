@@ -37,12 +37,30 @@ export async function initializeDatabase(database: SQLiteDatabase) {
         author TEXT NOT NULL,
         title TEXT NOT NULL,
         description TEXT NOT NULL,
+        subject TEXT,
+        tag TEXT,
+        role TEXT,
+        time TEXT,
         image_url TEXT,
         upvotes INTEGER DEFAULT 0,
         comments_count INTEGER DEFAULT 0,
         is_saved INTEGER DEFAULT 0, /* Filtro para a aba Salvos */
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+      );
+
+      /* Tabela de Comentários */
+      CREATE TABLE IF NOT EXISTS comments (
+        id TEXT PRIMARY KEY,
+        post_id TEXT NOT NULL,
+        author TEXT NOT NULL,
+        avatar TEXT,
+        text TEXT NOT NULL,
+        time TEXT,
+        likes INTEGER DEFAULT 0,
+        isLiked INTEGER DEFAULT 0,
+        replies TEXT DEFAULT '[]',
+        FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE
       );
 
       /* Inserção do Usuário Inicial (Seed) */
@@ -54,6 +72,12 @@ export async function initializeDatabase(database: SQLiteDatabase) {
       VALUES 
       ('dev_pt', 'd://dev_pt', '15k', 'Comunidade para desenvolvedores que falam português.', 1),
       ('tecnologia', 'd://tecnologia', '250k', 'Discussões sobre o mundo da tecnologia.', 1);
+
+      /* Inserção de Posts de Exemplo (Seed) */
+      INSERT OR IGNORE INTO posts (id, user_id, author, title, description, subject, tag, role, time, upvotes, comments_count)
+      VALUES 
+      ('post_1', 1, 'João Victor', 'Qual a melhor linguagem para iniciantes em 2026?', 'Estou em dúvida entre Python e Go. O que o mercado está pedindo mais atualmente para vagas Junior?', 'd://dev_pt', '#discussão', 'Desenvolvedor', '1 h', 42, 15),
+      ('post_2', 1, 'João Victor', 'Novo processador quântico atinge estabilidade comercial', 'Isso pode mudar completamente a forma como lidamos com criptografia na web.', 'd://tecnologia', '#news', 'Desenvolvedor', '5 h', 890, 142);
     `);
 
     console.log("Banco de dados DOXA inicializado.");

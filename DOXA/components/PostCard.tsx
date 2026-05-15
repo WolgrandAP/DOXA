@@ -11,13 +11,15 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
+import { useSQLiteContext } from 'expo-sqlite';
 
 export function PostCard({ item, initialSaved = false }: { item: any; initialSaved?: boolean }) {
   const router = useRouter();
   const [votes, setVotes] = useState(item.votes);
   const [voted, setVoted] = useState(false);
-  const [isSaved, setIsSaved] = useState(initialSaved);
+  const [isSaved, setIsSaved] = useState(item.isSaved || initialSaved);
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const db = useSQLiteContext();
 
   const handleLike = () => {
     if (!voted) {
@@ -58,9 +60,16 @@ export function PostCard({ item, initialSaved = false }: { item: any; initialSav
           </View>
           <TouchableOpacity
             hitSlop={10}
-            onPress={(e) => {
+            onPress={async (e) => {
               e.stopPropagation?.();
-              setIsSaved(!isSaved);
+              const newSavedState = !isSaved;
+              setIsSaved(newSavedState);
+              try {
+                await db.runAsync('UPDATE posts SET is_saved = ? WHERE id = ?', [newSavedState ? 1 : 0, item.id]);
+              } catch (error) {
+                console.error("Erro ao salvar o post:", error);
+                setIsSaved(!newSavedState); // reverte em caso de erro
+              }
             }}
           >
             <Ionicons
