@@ -5,8 +5,6 @@ import { useDatabase } from "@/database/useDatabase";
 
 export function FollowingFeed() {
   const listRef = useRef<FlatList>(null);
-  const hasInitialized = useRef(false);
-  
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { getFollowingPosts } = useDatabase();
@@ -20,10 +18,6 @@ export function FollowingFeed() {
     try {
       const data = await getFollowingPosts();
       setPosts(data);
-      if (!hasInitialized.current) {
-        listRef.current?.scrollToOffset({ offset: 0, animated: false });
-        hasInitialized.current = true;
-      }
     } finally {
       setLoading(false);
     }
@@ -67,5 +61,5 @@ const styles = StyleSheet.create({
     color: "#aaa",
     textAlign: "center",
     marginTop: 20,
-  }
+  },
 });

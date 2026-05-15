@@ -21,118 +21,108 @@ import * as ImagePicker from "expo-image-picker";
 import { useDatabase } from "@/database/useDatabase";
 
 const AVAILABLE_TOPICS = [
-  "Filosofia",
-  "Teologia",
-  "Política",
-  "Ciência",
-  "Tecnologia",
-  "História",
-  "Psicologia",
-  "Sociologia",
-  "Economia",
-  "Direito",
-  "Educação",
-  "Arte",
-  "Literatura",
-  "Música",
-  "Saúde",
-  "Matemática",
-  "Física",
-  "Biologia",
-  "Astronomia",
-  "Engenharia",
-  "Programação",
-  "Inteligência Artificial",
-  "Ética",
-  "Meio Ambiente",
-  "Esportes",
-  "Cultura",
-  "Religião",
-  "Debates",
-  "Notícias",
-  "Memes",
+  "Filosofia", "Teologia", "Política", "Ciência", "Tecnologia",
+  "História", "Psicologia", "Sociologia", "Economia", "Direito",
+  "Educação", "Arte", "Literatura", "Música", "Saúde",
+  "Matemática", "Física", "Biologia", "Astronomia", "Engenharia",
+  "Programação", "Inteligência Artificial", "Ética", "Meio Ambiente",
+  "Esportes", "Cultura", "Religião", "Debates", "Notícias", "Memes",
 ];
 
 const MAX_TOPICS = 3;
+const NAME_REGEX = /^[a-zA-Z0-9_]{3,21}$/;
 
 export default function CreateCommunityScreen() {
   const router = useRouter();
-  const { createCommunity } = useDatabase();
+  const { createCommunity, checkCommunityNameExists } = useDatabase();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
 
+  const isNameValid = NAME_REGEX.test(name);
+
+  const getNameHint = () => {
+    if (name.length === 0) return "Nome obrigatório (letras, números, _)";
+    if (/[^a-zA-Z0-9_]/.test(name)) return "Apenas letras, números e _ são permitidos";
+    if (name.length < 3) return "Mínimo de 3 caracteres";
+    return null;
+  };
+
+  const handleNameChange = (text: string) => {
+    setName(text.replace(/[^a-zA-Z0-9_]/g, ""));
+  };
+
   const pickBanner = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [16, 9],
       quality: 0.8,
     });
-
     if (!result.canceled && result.assets[0].uri) {
       setBannerUrl(result.assets[0].uri);
     }
   };
 
-  const isFormValid =
-    name.trim().length > 0 &&
-    description.trim().length > 0 &&
-    selectedTopics.length >= 1 &&
-    selectedTopics.length <= MAX_TOPICS;
-
   const toggleTopic = (topic: string) => {
     setSelectedTopics((prev) => {
-      if (prev.includes(topic)) {
-        return prev.filter((t) => t !== topic);
-      }
+      if (prev.includes(topic)) return prev.filter((t) => t !== topic);
       if (prev.length >= MAX_TOPICS) return prev;
       return [...prev, topic];
     });
   };
 
+  const isFormValid =
+    isNameValid &&
+    description.trim().length > 0 &&
+    selectedTopics.length >= 1 &&
+    selectedTopics.length <= MAX_TOPICS;
+
   const handleCreate = async () => {
     if (!isFormValid) return;
-    
-    const communityId = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+
+    const communityId = name.toLowerCase();
+
+    const alreadyExists = await checkCommunityNameExists(name);
+    if (alreadyExists) {
+      Alert.alert(
+        "Nome já utilizado",
+        `Já existe uma comunidade chamada "${name}". Escolha outro nome.`
+      );
+      return;
+    }
+
     const success = await createCommunity({
       id: communityId,
       name: `d://${communityId}`,
-      description: description
+      description,
+      bannerUrl: bannerUrl || undefined,
     });
 
     if (success) {
-      Alert.alert("Comunidade criada!", `"${name}" foi criada com sucesso e adicionada ao seu perfil.`, [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      router.back();
+      setTimeout(() => {
+        Alert.alert("Comunidade criada!", `"${name}" foi criada com sucesso.`);
+      }, 300);
     } else {
-      Alert.alert("Erro", "Falha ao criar comunidade.");
+      Alert.alert("Erro", "Falha ao criar comunidade. Tente novamente.");
     }
   };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-
-      {/* Background Gradient */}
-      <LinearGradient
-        colors={["#050510", "#050510", "#170326"]}
-        style={StyleSheet.absoluteFill}
-      />
+      <LinearGradient colors={["#050510", "#050510", "#170326"]} style={StyleSheet.absoluteFill} />
 
       <SafeAreaView style={{ flex: 1 }}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={{ flex: 1 }}
         >
-          {/* ─── HEADER ─── */}
           <View style={styles.header}>
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={styles.backButton}
-            >
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
               <BlurView intensity={20} tint="dark" style={styles.backBlur}>
                 <Ionicons name="close" size={24} color="#e9d5ff" />
               </BlurView>
@@ -144,10 +134,7 @@ export default function CreateCommunityScreen() {
               onPress={handleCreate}
               activeOpacity={isFormValid ? 0.8 : 1}
               disabled={!isFormValid}
-              style={[
-                styles.createButtonWrapper,
-                !isFormValid && styles.createButtonDisabled,
-              ]}
+              style={[styles.createButtonWrapper, !isFormValid && styles.createButtonDisabled]}
             >
               <LinearGradient
                 colors={
@@ -159,30 +146,19 @@ export default function CreateCommunityScreen() {
                 end={{ x: 1, y: 1 }}
                 style={styles.createButton}
               >
-                <Text
-                  style={[
-                    styles.createText,
-                    !isFormValid && styles.createTextDisabled,
-                  ]}
-                >
+                <Text style={[styles.createText, !isFormValid && styles.createTextDisabled]}>
                   Criar
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
 
-          {/* ─── FORM CONTENT ─── */}
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* ─── Banner ─── */}
-            <TouchableOpacity
-              style={styles.bannerContainer}
-              activeOpacity={0.8}
-              onPress={pickBanner}
-            >
+            <TouchableOpacity style={styles.bannerContainer} activeOpacity={0.8} onPress={pickBanner}>
               {bannerUrl ? (
                 <Image source={{ uri: bannerUrl }} style={styles.bannerImage} />
               ) : (
@@ -196,26 +172,24 @@ export default function CreateCommunityScreen() {
               </View>
             </TouchableOpacity>
 
-            {/* ─── Glass Card: Nome & Descrição ─── */}
             <View style={styles.cardOuter}>
               <BlurView intensity={15} tint="dark" style={styles.glassCard}>
-                {/* Nome */}
                 <TextInput
                   style={styles.nameInput}
-                  placeholder="Nome da comunidade"
+                  placeholder="Nome (ex: minha_comunidade)"
                   placeholderTextColor="rgba(255,255,255,0.3)"
                   value={name}
-                  onChangeText={setName}
-                  maxLength={60}
+                  onChangeText={handleNameChange}
+                  maxLength={21}
+                  autoCapitalize="none"
+                  autoCorrect={false}
                 />
-                {!name.trim() && (
-                  <Text style={styles.requiredHint}>Nome Obrigatório</Text>
+                {getNameHint() && (
+                  <Text style={styles.requiredHint}>{getNameHint()}</Text>
                 )}
 
-                {/* Divider */}
                 <View style={styles.divider} />
 
-                {/* Descrição */}
                 <TextInput
                   style={styles.descriptionInput}
                   placeholder="Descreva o propósito da comunidade..."
@@ -228,12 +202,11 @@ export default function CreateCommunityScreen() {
                   maxLength={500}
                 />
                 {!description.trim() && (
-                  <Text style={styles.requiredHint}>Descrição Obrigatória</Text>
+                  <Text style={styles.requiredHint}>Descrição obrigatória</Text>
                 )}
               </BlurView>
             </View>
 
-            {/* ─── Tópicos ─── */}
             <View style={styles.topicsSection}>
               <View style={styles.topicsTitleRow}>
                 <Ionicons name="pricetags-outline" size={18} color="#c084fc" />
@@ -242,17 +215,15 @@ export default function CreateCommunityScreen() {
                   styles.topicCountBadge,
                   selectedTopics.length >= MAX_TOPICS && styles.topicCountBadgeFull,
                 ]}>
-                  <Text style={styles.topicCountText}>
-                    {selectedTopics.length}/{MAX_TOPICS}
-                  </Text>
+                  <Text style={styles.topicCountText}>{selectedTopics.length}/{MAX_TOPICS}</Text>
                 </View>
               </View>
               <Text style={styles.topicsSubtitle}>
                 {selectedTopics.length === 0
                   ? "Selecione pelo menos 1 tópico (máximo 3)"
                   : selectedTopics.length >= MAX_TOPICS
-                    ? "Limite de tópicos atingido"
-                    : `Selecione até mais ${MAX_TOPICS - selectedTopics.length} tópico${MAX_TOPICS - selectedTopics.length > 1 ? "s" : ""}`}
+                  ? "Limite de tópicos atingido"
+                  : `Selecione até mais ${MAX_TOPICS - selectedTopics.length} tópico${MAX_TOPICS - selectedTopics.length > 1 ? "s" : ""}`}
               </Text>
 
               <View style={styles.topicsCardOuter}>
@@ -265,28 +236,15 @@ export default function CreateCommunityScreen() {
                           key={topic}
                           onPress={() => toggleTopic(topic)}
                           activeOpacity={0.7}
-                          style={[
-                            styles.topicChip,
-                            isSelected && styles.topicChipSelected,
-                          ]}
+                          style={[styles.topicChip, isSelected && styles.topicChipSelected]}
                         >
                           {isSelected ? (
                             <LinearGradient
-                              colors={[
-                                "rgba(168, 85, 247, 0.35)",
-                                "rgba(126, 34, 206, 0.2)",
-                              ]}
+                              colors={["rgba(168, 85, 247, 0.35)", "rgba(126, 34, 206, 0.2)"]}
                               style={styles.topicChipGradient}
                             >
-                              <Ionicons
-                                name="checkmark"
-                                size={14}
-                                color="#e9d5ff"
-                                style={{ marginRight: 4 }}
-                              />
-                              <Text style={styles.topicTextSelected}>
-                                {topic}
-                              </Text>
+                              <Ionicons name="checkmark" size={14} color="#e9d5ff" style={{ marginRight: 4 }} />
+                              <Text style={styles.topicTextSelected}>{topic}</Text>
                             </LinearGradient>
                           ) : (
                             <View style={styles.topicChipInner}>
@@ -312,8 +270,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#050510",
   },
-
-  // ── Header ──
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -361,13 +317,9 @@ const styles = StyleSheet.create({
   createTextDisabled: {
     color: "rgba(255,255,255,0.5)",
   },
-
-  // ── Scroll ──
   scrollContent: {
     paddingBottom: 120,
   },
-
-  // ── Banner ──
   bannerContainer: {
     height: 120,
     marginHorizontal: 16,
@@ -402,8 +354,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
-  // ── Glass Card ──
   cardOuter: {
     marginHorizontal: 16,
     marginTop: 5,
@@ -416,8 +366,6 @@ const styles = StyleSheet.create({
     padding: 18,
     backgroundColor: "rgba(255, 255, 255, 0.03)",
   },
-
-  // ── Inputs ──
   nameInput: {
     color: "#ffffff",
     fontSize: 22,
@@ -443,8 +391,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginTop: 6,
   },
-
-  // ── Topics Section ──
   topicsSection: {
     marginTop: 24,
     paddingHorizontal: 16,
@@ -495,8 +441,6 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 10,
   },
-
-  // ── Topic Chip ──
   topicChip: {
     borderRadius: 12,
     overflow: "hidden",

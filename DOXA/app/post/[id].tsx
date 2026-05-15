@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { useSQLiteContext } from 'expo-sqlite'; 
+import { useSQLiteContext } from "expo-sqlite";
 import {
   View,
   StyleSheet,
@@ -15,16 +15,13 @@ import {
   Modal,
   Pressable,
   Animated,
-  ActivityIndicator 
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useDatabase } from "@/database/useDatabase";
-
-// Remova ou comente os Mocks se não for mais usar como fallback
-// import { MOCK_DATA, MOCK_FOLLOWING } from "@/constants/posts";
 
 interface Post {
   id: string;
@@ -45,15 +42,12 @@ export default function PostDetailScreen() {
   const db = useSQLiteContext(); 
   const { createComment } = useDatabase();
 
-  // Estados de controle e UI
   const [loading, setLoading] = useState(true);
-  const [post, setPost] = useState<any>(null); // Dados do banco
+  const [post, setPost] = useState<any>(null);
   const [comments, setComments] = useState<any[]>([]);
   const [votes, setVotes] = useState(0);
   const [voted, setVoted] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
-
-  // Estados de Interface
   const [commentText, setCommentText] = useState("");
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [shareModalVisible, setShareModalVisible] = useState(false);
@@ -73,7 +67,16 @@ export default function PostDetailScreen() {
       );
 
       if (postData) {
-        setPost(postData);
+        setPost({
+          ...postData,
+          imageUrl: postData.image_url,
+          comments: postData.comments_count,
+          isSaved: postData.is_saved === 1,
+          subject: postData.subject || "d://geral",
+          tag: postData.tag || "#novo",
+          role: postData.role || "Usuário",
+          time: postData.time || "agora",
+        });
         setVotes(postData.upvotes || 0);
         setIsSaved(postData.is_saved === 1);
       }
@@ -148,9 +151,7 @@ export default function PostDetailScreen() {
     }
   };
 
-  const handleLikeComment = (commentId: string, replyId?: string) => {
-    console.log("Like no comentário:", commentId, replyId ? `resposta: ${replyId}` : "");
-  };
+  const handleLikeComment = (_commentId: string, _replyId?: string) => {};
 
   const toggleShareModal = (visible: boolean) => {
     if (visible) {
@@ -233,7 +234,15 @@ export default function PostDetailScreen() {
                 {/* Subject & Tag */}
                 <View style={styles.subjectRow}>
                   <View style={styles.subjectContainer}>
-                    <Text style={styles.subject}>{post.subject}</Text>
+                    <TouchableOpacity
+                      onPress={() => {
+                        const communityId = post.subject?.replace(/^d:\/\//, "") || "";
+                        if (communityId) router.push(`/community/${communityId}` as any);
+                      }}
+                      hitSlop={8}
+                    >
+                      <Text style={styles.subject}>{post.subject}</Text>
+                    </TouchableOpacity>
                     <View style={styles.tagBadge}>
                       <Text style={styles.tagText}>{post.tag}</Text>
                     </View>
@@ -726,7 +735,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
-  // ── Header ──
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -757,12 +765,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
   },
 
-  // ── Scroll ──
   scrollContent: {
     paddingBottom: 100,
   },
 
-  // ── Post Card ──
   postCardOuter: {
     marginHorizontal: 16,
     marginTop: 5,
@@ -884,7 +890,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // ── Comments Section ──
   commentsSection: {
     marginTop: 24,
     paddingHorizontal: 16,
@@ -924,7 +929,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
 
-  // ── Comment Input Bar ──
   commentBarOuter: {
     borderTopWidth: 1,
     borderTopColor: "rgba(255,255,255,0.08)",
@@ -973,7 +977,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  // ── Fullscreen Image Modal ──
   modalBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.95)",
@@ -1002,7 +1005,6 @@ const styles = StyleSheet.create({
     height: "80%",
   },
 
-  // ── Share Modal ──
   shareModalBackdrop: {
     flex: 1,
     backgroundColor: "transparent",
@@ -1071,7 +1073,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // ── Comments List ──
   commentsList: {
     gap: 12,
   },

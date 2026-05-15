@@ -33,11 +33,12 @@ export default function CreatePostScreen() {
   const [description, setDescription] = useState("");
   const [media, setMedia] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<"image" | "video" | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     async function loadCommunities() {
       try {
-        const comms = await db.getAllAsync<any>('SELECT * FROM communities WHERE is_joined = 1');
+        const comms = await db.getAllAsync<any>('SELECT * FROM communities WHERE is_joined = 1 OR creator_id = 1');
         setCommunities(comms);
         if (comms.length > 0) {
           setSubject(comms[0].name);
@@ -163,8 +164,26 @@ export default function CreatePostScreen() {
                     <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 13, fontWeight: "600", marginBottom: 8, marginLeft: 2 }}>
                       Postar em:
                     </Text>
+                    <TextInput
+                      style={{
+                        backgroundColor: "rgba(255,255,255,0.05)",
+                        borderRadius: 10,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        color: "#fff",
+                        marginBottom: 12,
+                        borderWidth: 1,
+                        borderColor: "rgba(255,255,255,0.1)",
+                      }}
+                      placeholder="Pesquisar comunidade..."
+                      placeholderTextColor="rgba(255,255,255,0.3)"
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                    />
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                      {communities.map((comm) => (
+                      {communities
+                        .filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.id.toLowerCase().includes(searchQuery.toLowerCase()))
+                        .map((comm) => (
                         <TouchableOpacity
                           key={comm.id}
                           activeOpacity={0.7}
