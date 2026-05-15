@@ -67,7 +67,16 @@ export default function PostDetailScreen() {
       );
 
       if (postData) {
-        setPost(postData);
+        setPost({
+          ...postData,
+          imageUrl: postData.image_url,
+          comments: postData.comments_count,
+          isSaved: postData.is_saved === 1,
+          subject: postData.subject || "d://geral",
+          tag: postData.tag || "#novo",
+          role: postData.role || "Usuário",
+          time: postData.time || "agora",
+        });
         setVotes(postData.upvotes || 0);
         setIsSaved(postData.is_saved === 1);
       }

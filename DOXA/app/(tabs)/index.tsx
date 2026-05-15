@@ -26,7 +26,7 @@ export default function FeedScreen() {
         <View style={styles.logoContainer}>
           <View style={styles.logoGlass}>
             <BlurView intensity={20} tint="light" style={styles.logoBlur}>
-              <Ionicons name="terminal" size={28} color="#a855f7" />
+              <Text style={styles.logoLetter}>D</Text>
             </BlurView>
           </View>
         </View>
@@ -87,6 +87,13 @@ const styles = StyleSheet.create({
     padding: 10,
     justifyContent: "center",
     alignItems: "center",
+    width: 48,
+    height: 48,
+  },
+  logoLetter: {
+    fontSize: 28,
+    fontWeight: "900",
+    color: "#a855f7",
   },
   headerTabs: {
     flexDirection: "row",
