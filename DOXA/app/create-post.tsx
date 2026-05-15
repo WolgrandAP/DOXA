@@ -1,5 +1,5 @@
 // app/create-post.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -19,14 +19,36 @@ import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import { useSQLiteContext } from "expo-sqlite";
+import { useDatabase } from "@/database/useDatabase";
 
 export default function CreatePostScreen() {
   const router = useRouter();
+  const { createPost } = useDatabase();
+  const db = useSQLiteContext();
 
+  const [subject, setSubject] = useState("");
+  const [communities, setCommunities] = useState<any[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [media, setMedia] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<"image" | "video" | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    async function loadCommunities() {
+      try {
+        const comms = await db.getAllAsync<any>('SELECT * FROM communities WHERE is_joined = 1 OR creator_id = 1');
+        setCommunities(comms);
+        if (comms.length > 0) {
+          setSubject(comms[0].name);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar comunidades:", error);
+      }
+    }
+    loadCommunities();
+  }, [db]);
 
   const pickMedia = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -56,7 +78,7 @@ export default function CreatePostScreen() {
     setMediaType(null);
   };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (!title.trim()) {
       Alert.alert("Título obrigatório", "Adicione um título ao seu post.");
       return;
@@ -65,10 +87,22 @@ export default function CreatePostScreen() {
       Alert.alert("Descrição obrigatória", "Escreva o conteúdo do seu post.");
       return;
     }
-    // TODO: lógica de publicação real
-    Alert.alert("Post publicado!", "Seu post foi publicado com sucesso.", [
-      { text: "OK", onPress: () => router.back() },
-    ]);
+
+    const success = await createPost({
+      id: `post_${Date.now()}`,
+      title,
+      description,
+      subject: subject.trim() ? subject : undefined,
+      image_url: media
+    });
+
+    if (success) {
+      Alert.alert("Post publicado!", "Seu post enviado com sucesso.", [
+        { text: "OK", onPress: () => router.back() },
+      ]);
+    } else {
+      Alert.alert("Erro", "Falha ao salvar post.");
+    }
   };
 
   return (
@@ -124,6 +158,67 @@ export default function CreatePostScreen() {
             {/* Glass Card Container */}
             <View style={styles.cardOuter}>
               <BlurView intensity={15} tint="dark" style={styles.glassCard}>
+                {/* Seleção de Comunidade */}
+                {communities.length > 0 ? (
+                  <View style={{ marginBottom: 16 }}>
+                    <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 13, fontWeight: "600", marginBottom: 8, marginLeft: 2 }}>
+                      Postar em:
+                    </Text>
+                    <TextInput
+                      style={{
+                        backgroundColor: "rgba(255,255,255,0.05)",
+                        borderRadius: 10,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        color: "#fff",
+                        marginBottom: 12,
+                        borderWidth: 1,
+                        borderColor: "rgba(255,255,255,0.1)",
+                      }}
+                      placeholder="Pesquisar comunidade..."
+                      placeholderTextColor="rgba(255,255,255,0.3)"
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                    />
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                      {communities
+                        .filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.id.toLowerCase().includes(searchQuery.toLowerCase()))
+                        .map((comm) => (
+                        <TouchableOpacity
+                          key={comm.id}
+                          activeOpacity={0.7}
+                          onPress={() => setSubject(comm.name)}
+                          style={{
+                            paddingHorizontal: 12,
+                            paddingVertical: 6,
+                            borderRadius: 12,
+                            borderWidth: 1,
+                            borderColor: subject === comm.name ? "rgba(168,85,247,0.8)" : "rgba(255,255,255,0.1)",
+                            backgroundColor: subject === comm.name ? "rgba(168,85,247,0.2)" : "transparent",
+                          }}
+                        >
+                          <Text style={{ color: subject === comm.name ? "#f3e8ff" : "rgba(255,255,255,0.6)", fontSize: 13, fontWeight: subject === comm.name ? "700" : "500" }}>
+                            {comm.name}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                ) : (
+                  <TextInput
+                    style={[styles.titleInput, { fontSize: 16, color: "#c084fc", fontWeight: "600", marginBottom: 8 }]}
+                    placeholder="d://comunidade (Opcional)"
+                    placeholderTextColor="rgba(192, 132, 252, 0.4)"
+                    value={subject}
+                    onChangeText={setSubject}
+                    maxLength={40}
+                    multiline={false}
+                    autoCapitalize="none"
+                  />
+                )}
+                
+                <View style={styles.divider} />
+
                 {/* Título */}
                 <TextInput
                   style={styles.titleInput}

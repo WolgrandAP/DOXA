@@ -1,4 +1,5 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useSQLiteContext } from "expo-sqlite";
 import {
   View,
   StyleSheet,
@@ -14,261 +15,159 @@ import {
   Modal,
   Pressable,
   Animated,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { MOCK_DATA, MOCK_FOLLOWING, Post } from "@/constants/posts";
+import { useDatabase } from "@/database/useDatabase";
 
-const ALL_POSTS = [...MOCK_DATA, ...MOCK_FOLLOWING];
-
-const MOCK_COMMENTS_BY_POST: Record<string, any[]> = {
-  "1": [
-    {
-      id: "c1-1",
-      author: "DevSenior",
-      avatar: "https://i.pravatar.cc/150?u=dev",
-      text: "Parabéns, cara! O primeiro é o mais difícil. Agora é só focar em entregar valor e curtir os dólares.",
-      time: "1h atrás",
-      likes: 45,
-      isLiked: false,
-      replies: [
-        {
-          id: "c1-1-1",
-          author: "User99",
-          avatar: "https://i.pravatar.cc/150?u=u99",
-          text: "Valeu demais! Ainda tô tremendo aqui kkkk",
-          time: "30min atrás",
-          likes: 12,
-          isLiked: false,
-        },
-      ],
-    },
-    {
-      id: "c1-2",
-      author: "EnglishMaster",
-      avatar: "https://i.pravatar.cc/150?u=eng",
-      text: "Dica: não pare de estudar inglês. No dia a dia das reuniões o bicho pega no começo.",
-      time: "2h atrás",
-      likes: 8,
-      isLiked: false,
-      replies: [],
-    },
-  ],
-  "2": [
-    {
-      id: "c2-1",
-      author: "RecrutadorSincero",
-      avatar: "https://i.pravatar.cc/150?u=rec",
-      text: "Infelizmente o mercado saturou de gente que só fez curso de 6 meses. O sarrafo subiu pra filtrar quem realmente sabe a base.",
-      time: "3h atrás",
-      likes: 89,
-      isLiked: false,
-      replies: [
-        {
-          id: "c2-1-1",
-          author: "JhowDev",
-          avatar: "https://i.pravatar.cc/150?u=jhow",
-          text: "Mas pedir Kubernetes pra Júnior é sacanagem, né?",
-          time: "2h atrás",
-          likes: 120,
-          isLiked: true,
-        },
-      ],
-    },
-  ],
-  "3": [
-    {
-      id: "c3-1",
-      author: "MembroDoSub",
-      avatar: "https://i.pravatar.cc/150?u=sub",
-      text: "Bem-vindo ao clube. Perdi 10k em Luna e hoje vendo bolo de pote.",
-      time: "10min atrás",
-      likes: 156,
-      isLiked: false,
-      replies: [],
-    },
-    {
-      id: "c3-2",
-      author: "CoachFinanceiro",
-      avatar: "https://i.pravatar.cc/150?u=coach",
-      text: "O erro foi não ter diversificado em rinha de galo.",
-      time: "5min atrás",
-      likes: 42,
-      isLiked: false,
-      replies: [],
-    },
-  ],
-  "4": [
-    {
-      id: "c4-1",
-      author: "CJ_from_SA",
-      avatar: "https://i.pravatar.cc/150?u=cj",
-      text: "Ah shit, here we go again. Vou ter que comprar um PS5 só pra isso.",
-      time: "2min atrás",
-      likes: 2400,
-      isLiked: false,
-      replies: [
-        {
-          id: "c4-1-1",
-          author: "GamerBr",
-          avatar: "https://i.pravatar.cc/150?u=br",
-          text: "Até lá já saiu o PS6 kkkkk",
-          time: "1min atrás",
-          likes: 450,
-          isLiked: false,
-        },
-      ],
-    },
-  ],
-  "6": [
-    {
-      id: "c6-1",
-      author: "IsaacAsimov",
-      avatar: "https://i.pravatar.cc/150?u=isaac",
-      text: "As três leis da robótica mandaram um abraço.",
-      time: "5h atrás",
-      likes: 120,
-      isLiked: false,
-      replies: [],
-    },
-  ],
-  "10": [
-    {
-      id: "c10-1",
-      author: "HansZimmerFan",
-      avatar: "https://i.pravatar.cc/150?u=hans",
-      text: "S.T.A.Y. 😭 Aquela cena na biblioteca destrói qualquer um.",
-      time: "1h atrás",
-      likes: 340,
-      isLiked: true,
-      replies: [
-        {
-          id: "c10-1-1",
-          author: "Cinefilo",
-          avatar: "https://i.pravatar.cc/150?u=cine",
-          text: "Don't let me leave, Murph!",
-          time: "30min atrás",
-          likes: 89,
-          isLiked: false,
-        },
-      ],
-    },
-  ],
-  "12": [
-    {
-      id: "c12-1",
-      author: "EnergiaSP",
-      avatar: "https://i.pravatar.cc/150?u=luz",
-      text: "Obrigado pela preferência, sua conta de luz agradece.",
-      time: "1d atrás",
-      likes: 560,
-      isLiked: false,
-      replies: [],
-    },
-  ],
-  // Posts sem comentários propositais: "5", "7", "9" etc.
-};
+interface Post {
+  id: string;
+  user_id?: number; 
+  author: string;
+  title: string;
+  description: string;
+  image_url: string | null;
+  upvotes: number;
+  comments_count: number;
+  is_saved: number;
+  created_at: string;
+}
 
 export default function PostDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const db = useSQLiteContext(); 
+  const { createComment } = useDatabase();
 
-  const post = ALL_POSTS.find((p) => p.id === id);
-
-  const [votes, setVotes] = useState(post?.votes ?? 0);
+  const [loading, setLoading] = useState(true);
+  const [post, setPost] = useState<any>(null);
+  const [comments, setComments] = useState<any[]>([]);
+  const [votes, setVotes] = useState(0);
   const [voted, setVoted] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [shareModalVisible, setShareModalVisible] = useState(false);
-  const [comments, setComments] = useState<any[]>([]);
-  const [isSaved, setIsSaved] = useState(false);
 
-  // Carrega os comentários específicos do post ao entrar na tela
-  React.useEffect(() => {
-    if (id) {
-      setComments(MOCK_COMMENTS_BY_POST[id] || []);
-    }
-  }, [id]);
-
+  
   const shareAnimation = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  const handleLike = () => {
-    if (!voted) {
-      Animated.sequence([
-        Animated.timing(scaleAnim, {
-          toValue: 1.4,
-          duration: 100,
-          useNativeDriver: false,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          friction: 4,
-          useNativeDriver: false,
-        }),
-      ]).start();
-      setVotes((v) => v + 1);
-    } else {
-      setVotes((v) => v - 1);
+  const loadData = useCallback(async () => {
+    if (!id) return;
+    try {
+      setLoading(true);
+      
+      const postData = await db.getFirstAsync<any>(
+        'SELECT * FROM posts WHERE id = ?', 
+        [id]
+      );
+
+      if (postData) {
+        setPost({
+          ...postData,
+          imageUrl: postData.image_url,
+          comments: postData.comments_count,
+          isSaved: postData.is_saved === 1,
+          subject: postData.subject || "d://geral",
+          tag: postData.tag || "#novo",
+          role: postData.role || "Usuário",
+          time: postData.time || "agora",
+        });
+        setVotes(postData.upvotes || 0);
+        setIsSaved(postData.is_saved === 1);
+      }
+
+      const commentsData = await db.getAllAsync<any>(
+        'SELECT * FROM comments WHERE post_id = ? ORDER BY time DESC',
+        [id]
+      );
+      
+      const parsedComments = commentsData.map(c => ({
+        ...c,
+        replies: typeof c.replies === 'string' ? JSON.parse(c.replies) : (c.replies || [])
+      }));
+
+      setComments(parsedComments);
+
+    } catch (error) {
+      console.error("Erro ao carregar dados do SQLite:", error);
+    } finally {
+      setLoading(false);
     }
-    setVoted(!voted);
+  }, [id, db]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleLike = async () => {
+    const newVoted = !voted;
+    const newVotes = newVoted ? votes + 1 : votes - 1;
+
+    if (newVoted) {
+      Animated.sequence([
+        Animated.timing(scaleAnim, { toValue: 1.4, duration: 100, useNativeDriver: false }),
+        Animated.spring(scaleAnim, { toValue: 1, friction: 4, useNativeDriver: false }),
+      ]).start();
+    }
+
+    setVotes(newVotes);
+    setVoted(newVoted);
+
+    try {
+      await db.runAsync(
+        'UPDATE posts SET upvotes = ? WHERE id = ?',
+        [newVotes, id]
+      );
+    } catch (e) {
+      console.error("Erro ao salvar like:", e);
+    }
   };
 
-  const handleLikeComment = (commentId: string, replyId?: string) => {
-    setComments((prev) =>
-      prev.map((c) => {
-        if (c.id === commentId) {
-          if (replyId) {
-            return {
-              ...c,
-              replies: c.replies.map((r: any) =>
-                r.id === replyId
-                  ? {
-                      ...r,
-                      isLiked: !r.isLiked,
-                      likes: r.isLiked ? r.likes - 1 : r.likes + 1,
-                    }
-                  : r,
-              ),
-            };
-          }
-          return {
-            ...c,
-            isLiked: !c.isLiked,
-            likes: c.isLiked ? c.likes - 1 : c.likes + 1,
-          };
-        }
-        return c;
-      }),
-    );
+  const handleSave = async () => {
+    const newSaveStatus = !isSaved ? 1 : 0;
+    try {
+      await db.runAsync(
+        'UPDATE posts SET is_saved = ? WHERE id = ?',
+        [newSaveStatus, id]
+      );
+      setIsSaved(!isSaved);
+    } catch (e) {
+      console.error("Erro ao salvar post:", e);
+    }
   };
+
+  const handleSubmitComment = async () => {
+    if (!commentText.trim() || !id) return;
+    
+    const success = await createComment(id, commentText.trim());
+    if (success) {
+      setCommentText(""); 
+      loadData(); 
+    }
+  };
+
+  const handleLikeComment = (_commentId: string, _replyId?: string) => {};
 
   const toggleShareModal = (visible: boolean) => {
     if (visible) {
       setShareModalVisible(true);
-      Animated.timing(shareAnimation, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+      Animated.timing(shareAnimation, { toValue: 1, duration: 300, useNativeDriver: true }).start();
     } else {
-      Animated.timing(shareAnimation, {
-        toValue: 0,
-        duration: 250,
-        useNativeDriver: true,
-      }).start(() => setShareModalVisible(false));
+      Animated.timing(shareAnimation, { toValue: 0, duration: 250, useNativeDriver: true }).start(() => setShareModalVisible(false));
     }
   };
+
+  if (loading) return <ActivityIndicator style={{flex:1}} />;
 
   if (!post) {
     return (
       <View style={styles.container}>
-        <LinearGradient
-          colors={["#050510", "#050510", "#170326"]}
-          style={StyleSheet.absoluteFill}
-        />
+        <LinearGradient colors={["#050510", "#050510", "#170326"]} style={StyleSheet.absoluteFill} />
         <SafeAreaView style={styles.centeredContainer}>
           <Ionicons name="alert-circle-outline" size={48} color="#c084fc" />
           <Text style={styles.notFoundText}>Post não encontrado</Text>
@@ -335,7 +234,15 @@ export default function PostDetailScreen() {
                 {/* Subject & Tag */}
                 <View style={styles.subjectRow}>
                   <View style={styles.subjectContainer}>
-                    <Text style={styles.subject}>{post.subject}</Text>
+                    <TouchableOpacity
+                      onPress={() => {
+                        const communityId = post.subject?.replace(/^d:\/\//, "") || "";
+                        if (communityId) router.push(`/community/${communityId}` as any);
+                      }}
+                      hitSlop={8}
+                    >
+                      <Text style={styles.subject}>{post.subject}</Text>
+                    </TouchableOpacity>
                     <View style={styles.tagBadge}>
                       <Text style={styles.tagText}>{post.tag}</Text>
                     </View>
@@ -638,6 +545,7 @@ export default function PostDetailScreen() {
                   !commentText.trim() && styles.sendButtonDisabled,
                 ]}
                 disabled={!commentText.trim()}
+                onPress={handleSubmitComment}
               >
                 <LinearGradient
                   colors={
@@ -827,7 +735,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
-  // ── Header ──
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -858,12 +765,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
   },
 
-  // ── Scroll ──
   scrollContent: {
     paddingBottom: 100,
   },
 
-  // ── Post Card ──
   postCardOuter: {
     marginHorizontal: 16,
     marginTop: 5,
@@ -985,7 +890,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // ── Comments Section ──
   commentsSection: {
     marginTop: 24,
     paddingHorizontal: 16,
@@ -1025,7 +929,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
 
-  // ── Comment Input Bar ──
   commentBarOuter: {
     borderTopWidth: 1,
     borderTopColor: "rgba(255,255,255,0.08)",
@@ -1074,7 +977,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  // ── Fullscreen Image Modal ──
   modalBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.95)",
@@ -1103,7 +1005,6 @@ const styles = StyleSheet.create({
     height: "80%",
   },
 
-  // ── Share Modal ──
   shareModalBackdrop: {
     flex: 1,
     backgroundColor: "transparent",
@@ -1172,7 +1073,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // ── Comments List ──
   commentsList: {
     gap: 12,
   },

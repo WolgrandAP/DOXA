@@ -131,7 +131,6 @@ export function ExpandableFAB() {
           </TouchableOpacity>
         </Animated.View>
 
-        {/* Main Button (+) - Vidro Ultra Transparente */}
         <TouchableOpacity
           onPress={toggleMenu}
           activeOpacity={0.9}
@@ -139,7 +138,6 @@ export function ExpandableFAB() {
         >
           <BlurView intensity={35} tint="light" style={styles.mainButtonBlur}>
             <LinearGradient
-              // Opacidade reduzida para um efeito mais cristalino
               colors={["rgba(168, 85, 247, 0.3)", "rgba(126, 34, 206, 0.1)"]}
               style={styles.gradient}
             >
@@ -215,7 +213,6 @@ const styles = StyleSheet.create({
     borderRadius: 32.5,
     overflow: "hidden",
     borderWidth: 1.5,
-    // Borda levemente mais visível para compensar a transparência do centro
     borderColor: "rgba(255, 255, 255, 0.09)",
     shadowColor: "#a855f7",
     shadowOffset: { width: 0, height: 0 },

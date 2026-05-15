@@ -10,102 +10,57 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
-
-// Componentes de Feed
 import { RecommendedFeed } from "@/components/RecommendedFeed";
 import { FollowingFeed } from "@/components/FollowingFeed";
-// Componente de Botão Animado
 import { ExpandableFAB } from "@/components/ExpandableFAB";
 
 export default function FeedScreen() {
-  const [activeTab, setActiveTab] = useState<"recommended" | "following">(
-    "recommended",
-  );
+  const [activeTab, setActiveTab] = useState<"recommended" | "following">("recommended");
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-
-      {/* Background com gradiente Dark/Glitch */}
-      <LinearGradient
-        colors={["#050510", "#050510", "#170326"]}
-        style={StyleSheet.absoluteFill}
-      />
+      <LinearGradient colors={["#050510", "#050510", "#170326"]} style={StyleSheet.absoluteFill} />
 
       <SafeAreaView style={{ flex: 1 }}>
-        {/* APP LOGO SECTION - Glassmorphism style */}
         <View style={styles.logoContainer}>
           <View style={styles.logoGlass}>
             <BlurView intensity={20} tint="light" style={styles.logoBlur}>
-              <Ionicons name="terminal" size={28} color="#a855f7" />
+              <Text style={styles.logoLetter}>D</Text>
             </BlurView>
           </View>
         </View>
 
-        {/* TOP TABS NAVIGATION */}
         <View style={styles.headerTabs}>
           <TouchableOpacity
             onPress={() => setActiveTab("recommended")}
-            style={[
-              styles.tabButton,
-              activeTab === "recommended" && styles.activeTabBorder,
-            ]}
+            style={[styles.tabButton, activeTab === "recommended" && styles.activeTabBorder]}
           >
-            <Text
-              style={[
-                styles.tabLabel,
-                activeTab === "recommended"
-                  ? styles.activeText
-                  : styles.inactiveText,
-              ]}
-            >
+            <Text style={[styles.tabLabel, activeTab === "recommended" ? styles.activeText : styles.inactiveText]}>
               Recommended
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={() => setActiveTab("following")}
-            style={[
-              styles.tabButton,
-              activeTab === "following" && styles.activeTabBorder,
-            ]}
+            style={[styles.tabButton, activeTab === "following" && styles.activeTabBorder]}
           >
-            <Text
-              style={[
-                styles.tabLabel,
-                activeTab === "following"
-                  ? styles.activeText
-                  : styles.inactiveText,
-              ]}
-            >
+            <Text style={[styles.tabLabel, activeTab === "following" ? styles.activeText : styles.inactiveText]}>
               Following
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* FEED CONTENT - display:none usado para preservar o estado do scroll */}
         <View style={styles.feedWrapper}>
-          <View
-            style={{
-              flex: 1,
-              display: activeTab === "recommended" ? "flex" : "none",
-            }}
-          >
+          <View style={{ flex: 1, display: activeTab === "recommended" ? "flex" : "none" }}>
             <RecommendedFeed />
           </View>
-
-          <View
-            style={{
-              flex: 1,
-              display: activeTab === "following" ? "flex" : "none",
-            }}
-          >
+          <View style={{ flex: 1, display: activeTab === "following" ? "flex" : "none" }}>
             <FollowingFeed />
           </View>
         </View>
       </SafeAreaView>
 
-      {/* FAB ANIMADO COM OPÇÕES (Post e Community) */}
       <ExpandableFAB />
     </View>
   );
@@ -132,6 +87,13 @@ const styles = StyleSheet.create({
     padding: 10,
     justifyContent: "center",
     alignItems: "center",
+    width: 48,
+    height: 48,
+  },
+  logoLetter: {
+    fontSize: 28,
+    fontWeight: "900",
+    color: "#a855f7",
   },
   headerTabs: {
     flexDirection: "row",

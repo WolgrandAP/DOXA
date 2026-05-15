@@ -5,68 +5,79 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-  Pressable,
   Animated,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
+import { useSQLiteContext } from "expo-sqlite";
 
 export function PostCard({ item, initialSaved = false }: { item: any; initialSaved?: boolean }) {
   const router = useRouter();
   const [votes, setVotes] = useState(item.votes);
   const [voted, setVoted] = useState(false);
-  const [isSaved, setIsSaved] = useState(initialSaved);
+  const [isSaved, setIsSaved] = useState(item.isSaved || initialSaved);
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const db = useSQLiteContext();
 
-  const handleLike = () => {
-    if (!voted) {
+  const handleLike = async () => {
+    const newVoted = !voted;
+    const newVotes = newVoted ? votes + 1 : votes - 1;
+
+    if (newVoted) {
       Animated.sequence([
-        Animated.timing(scaleAnim, {
-          toValue: 1.4,
-          duration: 100,
-          useNativeDriver: false,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          friction: 4,
-          useNativeDriver: false,
-        }),
+        Animated.timing(scaleAnim, { toValue: 1.4, duration: 100, useNativeDriver: false }),
+        Animated.spring(scaleAnim, { toValue: 1, friction: 4, useNativeDriver: false }),
       ]).start();
-      setVotes((v: number) => v + 1);
-    } else {
-      setVotes((v: number) => v - 1);
     }
-    setVoted(!voted);
+
+    setVotes(newVotes);
+    setVoted(newVoted);
+
+    try {
+      await db.runAsync("UPDATE posts SET upvotes = ? WHERE id = ?", [newVotes, item.id]);
+    } catch (error) {
+      console.error("Erro ao curtir post:", error);
+    }
+  };
+
+  const handleSave = async () => {
+    const newSavedState = !isSaved;
+    setIsSaved(newSavedState);
+    try {
+      await db.runAsync("UPDATE posts SET is_saved = ? WHERE id = ?", [newSavedState ? 1 : 0, item.id]);
+    } catch (error) {
+      console.error("Erro ao salvar o post:", error);
+      setIsSaved(!newSavedState);
+    }
+  };
+
+  const handleCommunityPress = () => {
+    const communityId = item.subject?.replace(/^d:\/\//, "") || "";
+    if (communityId) router.push(`/community/${communityId}` as any);
   };
 
   return (
-    <Pressable
+    <TouchableOpacity
       onPress={() => router.push(`/post/${item.id}` as any)}
-      style={({ pressed }) => [
-        styles.container,
-        pressed && styles.containerPressed,
-      ]}
+      activeOpacity={0.85}
+      style={styles.container}
     >
       <BlurView intensity={15} tint="dark" style={styles.glassCard}>
         <View style={styles.header}>
           <View style={styles.subjectContainer}>
-            <Text style={styles.subject}>{item.subject}</Text>
+            <TouchableOpacity onPress={handleCommunityPress} hitSlop={8}>
+              <Text style={styles.subject}>{item.subject}</Text>
+            </TouchableOpacity>
             <View style={styles.tagBadge}>
               <Text style={styles.tagText}>{item.tag}</Text>
             </View>
           </View>
-          <TouchableOpacity
-            hitSlop={10}
-            onPress={(e) => {
-              e.stopPropagation?.();
-              setIsSaved(!isSaved);
-            }}
-          >
+          <TouchableOpacity hitSlop={10} onPress={handleSave}>
             <Ionicons
               name={isSaved ? "bookmark" : "bookmark-outline"}
               size={20}
-              color={isSaved ? "#ffffff" : "#fff"}
+              color="#fff"
             />
           </TouchableOpacity>
         </View>
@@ -81,11 +92,7 @@ export function PostCard({ item, initialSaved = false }: { item: any; initialSav
 
         {item.imageUrl && (
           <View style={styles.imageContainer}>
-            <Image
-              source={{ uri: item.imageUrl }}
-              style={styles.postImage}
-              resizeMode="cover"
-            />
+            <Image source={{ uri: item.imageUrl }} style={styles.postImage} resizeMode="cover" />
             <View style={styles.imageOverlay} />
           </View>
         )}
@@ -98,10 +105,7 @@ export function PostCard({ item, initialSaved = false }: { item: any; initialSav
           <View style={styles.leftActions}>
             <TouchableOpacity
               style={[styles.voteBtn, voted && styles.voteBtnActive]}
-              onPress={(e) => {
-                e.stopPropagation?.();
-                handleLike();
-              }}
+              onPress={handleLike}
             >
               <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
                 <Ionicons
@@ -120,7 +124,7 @@ export function PostCard({ item, initialSaved = false }: { item: any; initialSav
           </View>
         </View>
       </BlurView>
-    </Pressable>
+    </TouchableOpacity>
   );
 }
 
@@ -132,10 +136,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.12)",
-  },
-  containerPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.985 }],
   },
   glassCard: {
     padding: 18,
