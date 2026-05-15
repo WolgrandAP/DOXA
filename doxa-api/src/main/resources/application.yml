@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://ep-sparkling-thunder-aq0b7cj7-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channelBinding=require
-    username: neondb_owner
-    password: npg_y7fzoB8NEItF
+    url: 
+    username: 
+    password: 
     driver-class-name: org.postgresql.Driver
 
   jpa:
