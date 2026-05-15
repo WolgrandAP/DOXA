@@ -21,7 +21,8 @@ export function PostCard({ item, initialSaved = false }: { item: any; initialSav
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const db = useSQLiteContext();
 
-  const handleLike = () => {
+  const handleLike = async () => {
+    let newVotes = votes;
     if (!voted) {
       Animated.sequence([
         Animated.timing(scaleAnim, {
@@ -35,11 +36,19 @@ export function PostCard({ item, initialSaved = false }: { item: any; initialSav
           useNativeDriver: false,
         }),
       ]).start();
-      setVotes((v: number) => v + 1);
+      newVotes += 1;
+      setVotes(newVotes);
     } else {
-      setVotes((v: number) => v - 1);
+      newVotes -= 1;
+      setVotes(newVotes);
     }
     setVoted(!voted);
+
+    try {
+      await db.runAsync('UPDATE posts SET upvotes = ? WHERE id = ?', [newVotes, item.id]);
+    } catch (error) {
+      console.error("Erro ao curtir post:", error);
+    }
   };
 
   return (

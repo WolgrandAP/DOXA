@@ -65,6 +65,15 @@ export function useDatabase() {
     }
   };
 
+  const getJoinedCommunities = async () => {
+    try {
+      return await db.getAllAsync<any>('SELECT * FROM communities WHERE is_joined = 1');
+    } catch (error) {
+      console.error('Erro ao buscar comunidades:', error);
+      return [];
+    }
+  };
+
   const createPost = async (post: {
     id: string;
     title: string;
@@ -136,10 +145,32 @@ export function useDatabase() {
     }
   };
 
+  const getCommunityById = async (id: string) => {
+    try {
+      return await db.getFirstAsync<any>('SELECT * FROM communities WHERE id = ?', [id]);
+    } catch (error) {
+      console.error('Erro ao buscar comunidade:', error);
+      return null;
+    }
+  };
+
+  const getPostsByCommunity = async (subject: string) => {
+    try {
+      const posts = await db.getAllAsync<Post>('SELECT * FROM posts WHERE subject = ? ORDER BY created_at DESC', [subject]);
+      return posts.map(mapPost);
+    } catch (error) {
+      console.error('Erro ao buscar posts da comunidade:', error);
+      return [];
+    }
+  };
+
   return {
     getPosts,
     getUserPosts,
     getSavedPosts,
+    getJoinedCommunities,
+    getCommunityById,
+    getPostsByCommunity,
     getFollowingPosts,
     createPost,
     createCommunity,

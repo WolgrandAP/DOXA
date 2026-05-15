@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -18,41 +18,63 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
 import { PostCard } from "../../components/PostCard";
-import { MOCK_DATA, Post } from "../../constants/posts";
-import { MOCK_COMMUNITIES, Community } from "../../constants/communities";
+import { useDatabase } from "../../database/useDatabase";
+import { useSQLiteContext } from "expo-sqlite";
 
 const { width } = Dimensions.get("window");
 
 export default function SearchScreen() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const { getPosts } = useDatabase();
+  const db = useSQLiteContext();
+
+  const [allPosts, setAllPosts] = useState<any[]>([]);
+  const [allCommunities, setAllCommunities] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadSearchData() {
+      try {
+        const posts = await getPosts();
+        setAllPosts(posts);
+
+        const comms = await db.getAllAsync<any>('SELECT * FROM communities');
+        setAllCommunities(comms);
+      } catch (error) {
+        console.error("Erro na busca", error);
+      }
+    }
+    loadSearchData();
+  }, [db]);
 
   // Filtering logic
   const filteredPosts = useMemo(() => {
     if (!searchQuery.trim()) return [];
-    return MOCK_DATA.filter((post: Post) =>
+    return allPosts.filter((post) =>
       post.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [searchQuery]);
+  }, [searchQuery, allPosts]);
 
   const filteredCommunities = useMemo(() => {
     if (!searchQuery.trim()) return [];
-    return MOCK_COMMUNITIES.filter((community) =>
+    return allCommunities.filter((community) =>
       community.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [searchQuery]);
+  }, [searchQuery, allCommunities]);
 
   const recommendedCommunities = useMemo(() => {
-    return MOCK_COMMUNITIES.slice(0, 5);
-  }, []);
+    return allCommunities.slice(0, 5);
+  }, [allCommunities]);
 
-  const renderCommunityItem = ({ item }: { item: Community }) => (
+  const renderCommunityItem = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={styles.communityResultCard}
       onPress={() => router.push(`/community/${item.id}` as any)}
     >
       <BlurView intensity={10} tint="light" style={styles.communityResultBlur}>
-        <Image source={{ uri: item.imageUrl }} style={styles.communityResultImage} />
+        <View style={[styles.communityResultImage, { backgroundColor: "rgba(192, 132, 252, 0.2)", justifyContent: "center", alignItems: "center" }]}>
+          <Text style={{ color: "#c084fc", fontSize: 20, fontWeight: "bold" }}>{item.name.charAt(4).toUpperCase()}</Text>
+        </View>
         <View style={styles.communityResultInfo}>
           <Text style={styles.communityResultName}>{item.name}</Text>
           <Text style={styles.communityResultMembers}>{item.members} membros</Text>
@@ -110,7 +132,9 @@ export default function SearchScreen() {
                   style={styles.recommendedCard}
                   onPress={() => router.push(`/community/${community.id}` as any)}
                 >
-                  <Image source={{ uri: community.imageUrl }} style={styles.recommendedImage} />
+                  <View style={[styles.recommendedImage, { backgroundColor: "rgba(192, 132, 252, 0.2)", justifyContent: "center", alignItems: "center" }]}>
+                    <Text style={{ color: "#c084fc", fontSize: 40, fontWeight: "bold" }}>{community.name.charAt(4).toUpperCase()}</Text>
+                  </View>
                   <LinearGradient
                     colors={["transparent", "rgba(0,0,0,0.8)"]}
                     style={styles.recommendedGradient}
@@ -156,16 +180,16 @@ export default function SearchScreen() {
         ) : (
           <FlatList
             data={[
-              ...filteredCommunities.map((c: Community) => ({ ...c, type: "community" })),
-              ...filteredPosts.map((p: Post) => ({ ...p, type: "post" })),
+              ...filteredCommunities.map((c) => ({ ...c, type: "community" })),
+              ...filteredPosts.map((p) => ({ ...p, type: "post" })),
             ]}
             keyExtractor={(item) => `${item.type}-${item.id}`}
             contentContainerStyle={styles.resultsList}
             renderItem={({ item }) => {
               if (item.type === "community") {
-                return renderCommunityItem({ item: item as Community });
+                return renderCommunityItem({ item });
               }
-              return <PostCard item={item as Post} />;
+              return <PostCard item={item} />;
             }}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>

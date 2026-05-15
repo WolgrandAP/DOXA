@@ -1,32 +1,57 @@
-import React from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, SafeAreaView } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useState, useCallback } from "react";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, SafeAreaView, ActivityIndicator } from "react-native";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { PostCard } from "../../components/PostCard";
-import { MOCK_DATA } from "../../constants/posts";
-
-// Map community IDs to details for the header
-const COMMUNITY_DETAILS: Record<string, any> = {
-  "dev_pt": { name: "d://dev_pt", members: "15k", description: "Comunidade para desenvolvedores que falam português.", banner: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=2000&auto=format&fit=crop" },
-  "tecnologia": { name: "d://tecnologia", members: "250k", description: "Notícias e discussões sobre o mundo da tecnologia.", banner: "https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=2000&auto=format&fit=crop" },
-  "gaming": { name: "d://gaming", members: "1.2m", description: "O maior fórum de jogos da rede DOXA.", banner: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2000&auto=format&fit=crop" },
-  "meuSetup": { name: "d://meuSetup", members: "89k", description: "Compartilhe e avalie setups de outras pessoas.", banner: "https://images.unsplash.com/photo-1499951360447-b19be8fe80f5?q=80&w=2000&auto=format&fit=crop" },
-};
+import { useDatabase } from "../../database/useDatabase";
 
 export default function CommunityScreen() {
-  const { id } = useLocalSearchParams();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { getCommunityById, getPostsByCommunity } = useDatabase();
 
-  const communityId = typeof id === 'string' ? id : '';
-  const details = COMMUNITY_DETAILS[communityId] || { 
-    name: `d://${communityId}`, 
-    members: "10k", 
-    description: "Comunidade da rede DOXA.",
-    banner: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=2000&auto=format&fit=crop" 
-  };
+  const [details, setDetails] = useState<any>(null);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const communityPosts = MOCK_DATA.filter(post => post.subject === `d://${communityId}`);
+  const communityId = id || '';
+
+  useFocusEffect(
+    useCallback(() => {
+      async function loadCommunity() {
+        if (!communityId) return;
+        setLoading(true);
+        const commData = await getCommunityById(communityId);
+        if (commData) {
+          setDetails({
+            ...commData,
+            banner: commData.bannerUrl || "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=2000&auto=format&fit=crop"
+          });
+          const commPosts = await getPostsByCommunity(commData.name);
+          setPosts(commPosts);
+        }
+        setLoading(false);
+      }
+      loadCommunity();
+    }, [communityId])
+  );
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color="#a855f7" />
+      </View>
+    );
+  }
+
+  if (!details) {
+    return (
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <Text style={{ color: "white" }}>Comunidade não encontrada.</Text>
+      </View>
+    );
+  }
 
   const renderHeader = () => (
     <View style={styles.headerContainer}>
@@ -66,7 +91,7 @@ export default function CommunityScreen() {
         style={StyleSheet.absoluteFill}
       />
       <FlatList
-        data={communityPosts}
+        data={posts}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <PostCard item={item} />}
         ListHeaderComponent={renderHeader}

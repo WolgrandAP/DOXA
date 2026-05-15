@@ -37,7 +37,7 @@ export default function ProfileScreen() {
   const [isAvatarModalVisible, setIsAvatarModalVisible] = useState(false);
   const [dbData, setDbData] = useState<any[]>([]);
   const db = useSQLiteContext();
-  const { getUserPosts, getSavedPosts } = useDatabase();
+  const { getUserPosts, getSavedPosts, getJoinedCommunities } = useDatabase();
 
   async function loadProfile() {
     const userResult = await db.getFirstAsync<any>('SELECT * FROM users WHERE id = 1');
@@ -56,7 +56,7 @@ export default function ProfileScreen() {
           const saved = await getSavedPosts();
           setDbData(saved);
         } else if (activeTab === "communities") {
-          const comms = await db.getAllAsync('SELECT * FROM communities WHERE is_joined = 1');
+          const comms = await getJoinedCommunities();
           setDbData(comms);
         }
       }
