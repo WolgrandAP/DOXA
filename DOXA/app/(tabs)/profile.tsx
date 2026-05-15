@@ -47,6 +47,7 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       async function loadTabData() {
+        setDbData([]); // Evita renderizar dados antigos com a lógica da nova tab
         await loadProfile(); 
 
         if (activeTab === "posts") {
@@ -152,7 +153,7 @@ export default function ProfileScreen() {
       <BlurView intensity={15} tint="dark" style={styles.communityCard}>
         <View style={styles.communityHeader}>
           <View style={styles.communityIconPlaceholder}>
-            <Text style={styles.communityIconText}>{item.name.charAt(4).toUpperCase()}</Text>
+            <Text style={styles.communityIconText}>{item.name?.charAt(4).toUpperCase() || 'C'}</Text>
           </View>
           <View style={styles.communityInfo}>
             <Text style={styles.communityName}>{item.name}</Text>
