@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
+import { useSQLiteContext } from 'expo-sqlite';
+import { useFocusEffect } from "expo-router";
 import {
   View,
   Text,
@@ -6,8 +8,6 @@ import {
   Image,
   FlatList,
   TouchableOpacity,
-  ScrollView,
-  SafeAreaView,
   Modal,
 } from "react-native";
 import { BlurView } from "expo-blur";
@@ -15,24 +15,18 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { PostCard } from "../../components/PostCard";
-import { MOCK_DATA } from "../../constants/posts";
 import { EditProfileModal } from "../../components/EditProfileModal";
+import { useDatabase } from "../../database/useDatabase";
 
-// Mock User Data
 const INITIAL_USER = {
-  name: "João Victor",
-  handle: "@joaov",
-  bio: "Desenvolvedor Full Stack apaixonado por tecnologia e design. Tentando sobreviver aos legados e criar coisas novas 🚀",
-  followers: 1240,
-  following: 342,
-  avatarUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=800&auto=format&fit=crop",
-  bannerUrl: "https://images.unsplash.com/photo-1604871000636-074fa5117945?q=80&w=2000&auto=format&fit=crop",
-  communities: [
-    { id: "dev_pt", name: "d://dev_pt", members: "15k", description: "Comunidade para desenvolvedores que falam português." },
-    { id: "tecnologia", name: "d://tecnologia", members: "250k", description: "Notícias e discussões sobre o mundo da tecnologia." },
-    { id: "gaming", name: "d://gaming", members: "1.2m", description: "O maior fórum de jogos da rede DOXA." },
-    { id: "meuSetup", name: "d://meuSetup", members: "89k", description: "Compartilhe e avalie setups de outras pessoas." },
-  ]
+  name: "",
+  handle: "",
+  bio: "",
+  followers: 0,
+  following: 0,
+  avatarUrl: "",
+  bannerUrl: "",
+  communities: []
 };
 
 export default function ProfileScreen() {
@@ -41,15 +35,48 @@ export default function ProfileScreen() {
   const [user, setUser] = useState(INITIAL_USER);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isAvatarModalVisible, setIsAvatarModalVisible] = useState(false);
+  const [dbData, setDbData] = useState<any[]>([]);
+  const db = useSQLiteContext();
+  const { getUserPosts, getSavedPosts, getJoinedCommunities } = useDatabase();
 
-  // Override author in mock posts so they look like they belong to the user
-  const userPosts = MOCK_DATA.slice(0, 5).map(post => ({
-    ...post,
-    author: user.name,
-  }));
+  async function loadProfile() {
+    const userResult = await db.getFirstAsync<any>('SELECT * FROM users WHERE id = 1');
+    if (userResult) setUser(userResult);
+  }
 
-  // Mock saved posts
-  const savedPosts = MOCK_DATA.slice(5, 10);
+  useFocusEffect(
+    useCallback(() => {
+      async function loadTabData() {
+        setDbData([]); // Evita renderizar dados antigos com a lógica da nova tab
+        await loadProfile(); 
+
+        if (activeTab === "posts") {
+          const posts = await getUserPosts(1);
+          setDbData(posts);
+        } else if (activeTab === "saved") {
+          const saved = await getSavedPosts();
+          setDbData(saved);
+        } else if (activeTab === "communities") {
+          const comms = await getJoinedCommunities();
+          setDbData(comms);
+        }
+      }
+      loadTabData();
+    }, [activeTab])
+  );
+
+  const handleSaveProfile = async (updatedUser: typeof INITIAL_USER) => {
+    try {
+      await db.runAsync(
+        'UPDATE users SET name = ?, handle = ?, bio = ?, avatarUrl = ?, bannerUrl = ? WHERE id = 1',
+        [updatedUser.name, updatedUser.handle, updatedUser.bio, updatedUser.avatarUrl, updatedUser.bannerUrl]
+      );
+      setUser(updatedUser); 
+      setIsEditModalVisible(false);
+    } catch (error) {
+      console.error("Erro ao salvar perfil:", error);
+    }
+  };
 
   const renderHeader = () => (
     <View style={styles.headerContainer}>
@@ -126,7 +153,7 @@ export default function ProfileScreen() {
       <BlurView intensity={15} tint="dark" style={styles.communityCard}>
         <View style={styles.communityHeader}>
           <View style={styles.communityIconPlaceholder}>
-            <Text style={styles.communityIconText}>{item.name.charAt(4).toUpperCase()}</Text>
+            <Text style={styles.communityIconText}>{item.name?.charAt(4).toUpperCase() || 'C'}</Text>
           </View>
           <View style={styles.communityInfo}>
             <Text style={styles.communityName}>{item.name}</Text>
@@ -149,9 +176,9 @@ export default function ProfileScreen() {
         style={StyleSheet.absoluteFill}
       />
       <FlatList
-        data={(activeTab === "posts" ? userPosts : activeTab === "saved" ? savedPosts : user.communities) as any[]}
-        keyExtractor={(item: any) => item.id}
-        renderItem={({ item }: { item: any }) => (activeTab === "posts" || activeTab === "saved") ? <PostCard item={item} initialSaved={activeTab === "saved"} /> : renderCommunityItem({ item })}
+        data={dbData}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => (activeTab === "communities" ? renderCommunityItem({ item }) : <PostCard item={item} initialSaved={activeTab === "saved"} />)}
         ListHeaderComponent={renderHeader}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
@@ -174,6 +201,7 @@ export default function ProfileScreen() {
         </View>
       </Modal>
     </View>
+    
   );
 }
 

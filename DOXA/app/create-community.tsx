@@ -1,4 +1,3 @@
-// app/create-community.tsx
 import React, { useState } from "react";
 import {
   View,
@@ -19,6 +18,7 @@ import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import { useDatabase } from "@/database/useDatabase";
 
 const AVAILABLE_TOPICS = [
   "Filosofia",
@@ -57,6 +57,7 @@ const MAX_TOPICS = 3;
 
 export default function CreateCommunityScreen() {
   const router = useRouter();
+  const { createCommunity } = useDatabase();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -92,12 +93,23 @@ export default function CreateCommunityScreen() {
     });
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!isFormValid) return;
-    // TODO: lógica real de criação
-    Alert.alert("Comunidade criada!", `"${name}" foi criada com sucesso.`, [
-      { text: "OK", onPress: () => router.back() },
-    ]);
+    
+    const communityId = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const success = await createCommunity({
+      id: communityId,
+      name: `d://${communityId}`,
+      description: description
+    });
+
+    if (success) {
+      Alert.alert("Comunidade criada!", `"${name}" foi criada com sucesso e adicionada ao seu perfil.`, [
+        { text: "OK", onPress: () => router.back() },
+      ]);
+    } else {
+      Alert.alert("Erro", "Falha ao criar comunidade.");
+    }
   };
 
   return (
