@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
-import { useSQLiteContext } from 'expo-sqlite';
-import { useFocusEffect } from "expo-router";
+import { useSQLiteContext } from "expo-sqlite";
+import { useFocusEffect, useRouter } from "expo-router";
 import {
   View,
   Text,
@@ -13,7 +13,6 @@ import {
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
 import { PostCard } from "../../components/PostCard";
 import { EditProfileModal } from "../../components/EditProfileModal";
 import { useDatabase } from "../../database/useDatabase";
@@ -24,9 +23,9 @@ const INITIAL_USER = {
   bio: "",
   followers: 0,
   following: 0,
-  avatarUrl: "",
-  bannerUrl: "",
-  communities: []
+  avatarUrl: "https://ui-avatars.com/api/?name=User&background=random",
+  bannerUrl: "https://images.unsplash.com/photo-1604871000636-074fa5117945?q=80&w=2000&auto=format&fit=crop",
+  communities: [],
 };
 
 export default function ProfileScreen() {
@@ -37,28 +36,42 @@ export default function ProfileScreen() {
   const [isAvatarModalVisible, setIsAvatarModalVisible] = useState(false);
   const [dbData, setDbData] = useState<any[]>([]);
   const db = useSQLiteContext();
-  const { getUserPosts, getSavedPosts, getJoinedCommunities } = useDatabase();
+  const { getUserPosts, getSavedPosts, getJoinedCommunities, getCreatedCommunities } = useDatabase();
 
   async function loadProfile() {
-    const userResult = await db.getFirstAsync<any>('SELECT * FROM users WHERE id = 1');
+    const userResult = await db.getFirstAsync<any>("SELECT * FROM users WHERE id = 1");
     if (userResult) setUser(userResult);
   }
 
   useFocusEffect(
     useCallback(() => {
       async function loadTabData() {
-        setDbData([]); // Evita renderizar dados antigos com a lógica da nova tab
-        await loadProfile(); 
+        setDbData([]);
+        await loadProfile();
 
         if (activeTab === "posts") {
-          const posts = await getUserPosts(1);
-          setDbData(posts);
+          setDbData(await getUserPosts(1));
         } else if (activeTab === "saved") {
-          const saved = await getSavedPosts();
-          setDbData(saved);
+          setDbData(await getSavedPosts());
         } else if (activeTab === "communities") {
-          const comms = await getJoinedCommunities();
-          setDbData(comms);
+          const [createdComms, joinedComms] = await Promise.all([
+            getCreatedCommunities(),
+            getJoinedCommunities(),
+          ]);
+
+          const combined: any[] = [];
+          if (createdComms.length > 0) {
+            combined.push({ id: "header_created", isHeader: true, title: "Minhas Comunidades" });
+            combined.push(...createdComms);
+          }
+          if (joinedComms.length > 0) {
+            combined.push({ id: "header_joined", isHeader: true, title: "Participando" });
+            combined.push(...joinedComms);
+          }
+          if (combined.length === 0) {
+            combined.push({ id: "empty_comms", isEmpty: true, text: "Nenhuma comunidade encontrada." });
+          }
+          setDbData(combined);
         }
       }
       loadTabData();
@@ -68,10 +81,10 @@ export default function ProfileScreen() {
   const handleSaveProfile = async (updatedUser: typeof INITIAL_USER) => {
     try {
       await db.runAsync(
-        'UPDATE users SET name = ?, handle = ?, bio = ?, avatarUrl = ?, bannerUrl = ? WHERE id = 1',
+        "UPDATE users SET name = ?, handle = ?, bio = ?, avatarUrl = ?, bannerUrl = ? WHERE id = 1",
         [updatedUser.name, updatedUser.handle, updatedUser.bio, updatedUser.avatarUrl, updatedUser.bannerUrl]
       );
-      setUser(updatedUser); 
+      setUser(updatedUser);
       setIsEditModalVisible(false);
     } catch (error) {
       console.error("Erro ao salvar perfil:", error);
@@ -80,17 +93,15 @@ export default function ProfileScreen() {
 
   const renderHeader = () => (
     <View style={styles.headerContainer}>
-      {/* Banner */}
       <View style={styles.bannerContainer}>
         <Image source={{ uri: user.bannerUrl }} style={styles.bannerImage} />
         <View style={styles.bannerOverlay} />
       </View>
 
-      {/* Profile Info */}
       <View style={styles.profileInfoContainer}>
         <View style={styles.avatarRow}>
-          <TouchableOpacity 
-            style={styles.avatarContainer} 
+          <TouchableOpacity
+            style={styles.avatarContainer}
             activeOpacity={0.8}
             onPress={() => setIsAvatarModalVisible(true)}
           >
@@ -103,7 +114,6 @@ export default function ProfileScreen() {
 
         <Text style={styles.name}>{user.name}</Text>
         <Text style={styles.handle}>{user.handle}</Text>
-        
         <Text style={styles.bio}>{user.bio}</Text>
 
         <View style={styles.statsContainer}>
@@ -118,32 +128,18 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* Tabs */}
       <View style={styles.tabsContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === "posts" && styles.activeTab]}
-          onPress={() => setActiveTab("posts")}
-        >
-          <Text style={[styles.tabText, activeTab === "posts" && styles.activeTabText]}>
-            Posts
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === "communities" && styles.activeTab]}
-          onPress={() => setActiveTab("communities")}
-        >
-          <Text style={[styles.tabText, activeTab === "communities" && styles.activeTabText]}>
-            Comunidades
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === "saved" && styles.activeTab]}
-          onPress={() => setActiveTab("saved")}
-        >
-          <Text style={[styles.tabText, activeTab === "saved" && styles.activeTabText]}>
-            Salvos
-          </Text>
-        </TouchableOpacity>
+        {(["posts", "communities", "saved"] as const).map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            style={[styles.tab, activeTab === tab && styles.activeTab]}
+            onPress={() => setActiveTab(tab)}
+          >
+            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+              {tab === "posts" ? "Posts" : tab === "communities" ? "Comunidades" : "Salvos"}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
     </View>
   );
@@ -153,13 +149,16 @@ export default function ProfileScreen() {
       <BlurView intensity={15} tint="dark" style={styles.communityCard}>
         <View style={styles.communityHeader}>
           <View style={styles.communityIconPlaceholder}>
-            <Text style={styles.communityIconText}>{item.name?.charAt(4).toUpperCase() || 'C'}</Text>
+            <Text style={styles.communityIconText}>{item.name?.charAt(4).toUpperCase() || "C"}</Text>
           </View>
           <View style={styles.communityInfo}>
             <Text style={styles.communityName}>{item.name}</Text>
             <Text style={styles.communityMembers}>{item.members} membros</Text>
           </View>
-          <TouchableOpacity style={styles.joinButton} onPress={() => router.push(`/community/${item.id}` as any)}>
+          <TouchableOpacity
+            style={styles.joinButton}
+            onPress={() => router.push(`/community/${item.id}` as any)}
+          >
             <Text style={styles.joinButtonText}>Ver</Text>
           </TouchableOpacity>
         </View>
@@ -170,29 +169,37 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Background com gradiente Dark/Glitch */}
-      <LinearGradient
-        colors={["#050510", "#050510", "#170326"]}
-        style={StyleSheet.absoluteFill}
-      />
+      <LinearGradient colors={["#050510", "#050510", "#170326"]} style={StyleSheet.absoluteFill} />
       <FlatList
         data={dbData}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (activeTab === "communities" ? renderCommunityItem({ item }) : <PostCard item={item} initialSaved={activeTab === "saved"} />)}
+        renderItem={({ item }) => {
+          if (activeTab === "communities") {
+            if (item.isHeader) return <Text style={styles.sectionHeader}>{item.title}</Text>;
+            if (item.isEmpty) return <Text style={styles.emptyText}>{item.text}</Text>;
+            return renderCommunityItem({ item });
+          }
+          return <PostCard item={item} initialSaved={activeTab === "saved"} />;
+        }}
         ListHeaderComponent={renderHeader}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
         style={styles.flatList}
       />
+
       <EditProfileModal
         visible={isEditModalVisible}
         onClose={() => setIsEditModalVisible(false)}
         user={user}
-        onSave={(updatedUser) => setUser(updatedUser)}
+        onSave={handleSaveProfile}
       />
 
-      {/* Fullscreen Avatar Modal */}
-      <Modal visible={isAvatarModalVisible} transparent={true} animationType="fade" onRequestClose={() => setIsAvatarModalVisible(false)}>
+      <Modal
+        visible={isAvatarModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsAvatarModalVisible(false)}
+      >
         <View style={styles.fullScreenModal}>
           <TouchableOpacity style={styles.closeModalButton} onPress={() => setIsAvatarModalVisible(false)}>
             <Ionicons name="close" size={32} color="white" />
@@ -201,7 +208,6 @@ export default function ProfileScreen() {
         </View>
       </Modal>
     </View>
-    
   );
 }
 
@@ -214,7 +220,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContent: {
-    paddingBottom: 120,
+    paddingBottom: 40,
   },
   headerContainer: {
     marginBottom: 10,
@@ -250,7 +256,7 @@ const styles = StyleSheet.create({
     borderColor: "#050510",
     overflow: "hidden",
     backgroundColor: "#2a2a3e",
-    marginTop: -40, // Pull up to overlap with banner
+    marginTop: -40,
   },
   avatarImage: {
     width: "100%",
@@ -328,6 +334,20 @@ const styles = StyleSheet.create({
   },
   activeTabText: {
     color: "#fff",
+  },
+  sectionHeader: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  emptyText: {
+    color: "#aaa",
+    fontSize: 15,
+    textAlign: "center",
+    marginTop: 30,
   },
   communityCardWrapper: {
     marginHorizontal: 16,
