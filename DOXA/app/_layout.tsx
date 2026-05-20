@@ -17,6 +17,7 @@ export default function RootLayout() {
             contentStyle: { backgroundColor: "#050510" },
           }}
         >
+          <Stack.Screen name="(auth)" options={{ headerShown: false }}/>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen
             name="create-post"
