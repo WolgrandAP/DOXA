@@ -29,11 +29,35 @@ interface Post {
   author: string;
   title: string;
   description: string;
-  image_url: string | null;
+  imageUrl: string | null;
   upvotes: number;
   comments_count: number;
-  is_saved: number;
-  created_at: string;
+  isSaved: boolean;
+  subject: string;
+  tag: string;
+  role: string;
+  time: string;
+}
+
+interface Reply {
+  id: string;
+  author: string;
+  avatar: string;
+  time: string;
+  text: string;
+  likes: number;
+  isLiked: boolean;
+}
+
+interface Comment {
+  id: string;
+  author: string;
+  avatar: string;
+  time: string;
+  text: string;
+  likes: number;
+  isLiked: boolean;
+  replies: Reply[];
 }
 
 export default function PostDetailScreen() {
@@ -43,16 +67,15 @@ export default function PostDetailScreen() {
   const { createComment } = useDatabase();
 
   const [loading, setLoading] = useState(true);
-  const [post, setPost] = useState<any>(null);
-  const [comments, setComments] = useState<any[]>([]);
+  const [post, setPost] = useState<Post | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [votes, setVotes] = useState(0);
-  const [voted, setVoted] = useState(false);
+  const [voted, setVoted] = useState(false); 
   const [isSaved, setIsSaved] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [shareModalVisible, setShareModalVisible] = useState(false);
 
-  
   const shareAnimation = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -67,27 +90,40 @@ export default function PostDetailScreen() {
       );
 
       if (postData) {
-        setPost({
-          ...postData,
+        const formattedPost: Post = {
+          id: postData.id,
+          user_id: postData.user_id,
+          author: postData.author,
+          title: postData.title,
+          description: postData.description,
           imageUrl: postData.image_url,
-          comments: postData.comments_count,
+          upvotes: postData.upvotes || 0,
+          comments_count: postData.comments_count || 0,
           isSaved: postData.is_saved === 1,
           subject: postData.subject || "d://geral",
           tag: postData.tag || "#novo",
           role: postData.role || "Usuário",
           time: postData.time || "agora",
-        });
-        setVotes(postData.upvotes || 0);
-        setIsSaved(postData.is_saved === 1);
+        };
+        
+        setPost(formattedPost);
+        setVotes(formattedPost.upvotes);
+        setIsSaved(formattedPost.isSaved);
       }
 
       const commentsData = await db.getAllAsync<any>(
-        'SELECT * FROM comments WHERE post_id = ? ORDER BY time DESC',
+        'SELECT * FROM comments WHERE post_id = ? ORDER BY id DESC', 
         [id]
       );
       
-      const parsedComments = commentsData.map(c => ({
-        ...c,
+      const parsedComments: Comment[] = commentsData.map(c => ({
+        id: c.id.toString(),
+        author: c.author || "Anônimo",
+        avatar: c.avatar || "https://avatar.iran.liara.run/public", 
+        time: c.time || "agora",
+        text: c.text || "",
+        likes: c.likes || 0,
+        isLiked: c.is_liked === 1,
         replies: typeof c.replies === 'string' ? JSON.parse(c.replies) : (c.replies || [])
       }));
 
@@ -110,8 +146,8 @@ export default function PostDetailScreen() {
 
     if (newVoted) {
       Animated.sequence([
-        Animated.timing(scaleAnim, { toValue: 1.4, duration: 100, useNativeDriver: false }),
-        Animated.spring(scaleAnim, { toValue: 1, friction: 4, useNativeDriver: false }),
+        Animated.timing(scaleAnim, { toValue: 1.4, duration: 100, useNativeDriver: true }),
+        Animated.spring(scaleAnim, { toValue: 1, friction: 4, useNativeDriver: true }),
       ]).start();
     }
 
@@ -129,29 +165,55 @@ export default function PostDetailScreen() {
   };
 
   const handleSave = async () => {
-    const newSaveStatus = !isSaved ? 1 : 0;
+    const newSaveStatus = !isSaved;
+    setIsSaved(newSaveStatus);
+
     try {
       await db.runAsync(
         'UPDATE posts SET is_saved = ? WHERE id = ?',
-        [newSaveStatus, id]
+        [newSaveStatus ? 1 : 0, id]
       );
-      setIsSaved(!isSaved);
     } catch (e) {
+      setIsSaved(!newSaveStatus);
       console.error("Erro ao salvar post:", e);
     }
   };
 
   const handleSubmitComment = async () => {
-    if (!commentText.trim() || !id) return;
+    if (!commentText.trim() || !id || !post?.user_id) return; // Garante que temos o id do usuário
     
-    const success = await createComment(id, commentText.trim());
+    // Passando post.user_id como terceiro argumento requisitado
+    const success = await createComment(id, commentText.trim(), post.user_id);
     if (success) {
       setCommentText(""); 
       loadData(); 
     }
   };
 
-  const handleLikeComment = (_commentId: string, _replyId?: string) => {};
+  const handleLikeComment = async (commentId: string, replyId?: string) => {
+    // Atualização otimista do estado local de curtidas dos comentários/respostas
+    setComments(prevComments =>
+      prevComments.map(comment => {
+        if (!replyId && comment.id === commentId) {
+          const isLiked = !comment.isLiked;
+          return { ...comment, isLiked, likes: isLiked ? comment.likes + 1 : comment.likes - 1 };
+        }
+        if (replyId && comment.id === commentId) {
+          return {
+            ...comment,
+            replies: comment.replies.map(reply => {
+              if (reply.id === replyId) {
+                const isLiked = !reply.isLiked;
+                return { ...reply, isLiked, likes: isLiked ? reply.likes + 1 : reply.likes - 1 };
+              }
+              return reply;
+            })
+          };
+        }
+        return comment;
+      })
+    );
+  };
 
   const toggleShareModal = (visible: boolean) => {
     if (visible) {
@@ -162,7 +224,12 @@ export default function PostDetailScreen() {
     }
   };
 
-  if (loading) return <ActivityIndicator style={{flex:1}} />;
+  const shareTranslateY = shareAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [300, 0],
+  });
+
+  if (loading) return <ActivityIndicator style={{ flex: 1, backgroundColor: "#050510" }} color="#c084fc" />;
 
   if (!post) {
     return (
@@ -301,7 +368,7 @@ export default function PostDetailScreen() {
                         size={18}
                         color="white"
                       />
-                      <Text style={styles.actionText}>{post.comments}</Text>
+                      <Text style={styles.actionText}>{post.comments_count}</Text>
                     </TouchableOpacity>
                   </View>
 

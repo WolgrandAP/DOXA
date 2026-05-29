@@ -6,14 +6,33 @@ import { Ionicons } from "@expo/vector-icons";
 import { PostCard } from "../../components/PostCard";
 import { useDatabase } from "../../database/useDatabase";
 
+// Definição da interface para os detalhes da comunidade
+interface CommunityDetails {
+  id: string;
+  name: string;
+  banner?: string;
+  banner_url?: string;
+  members: number;
+  is_joined: number;
+  description: string;
+}
+
+// Definição genérica para a tipagem dos posts (ajuste as propriedades de acordo com seu banco)
+interface PostItem {
+  id: string | number;
+  title?: string;
+  content?: string;
+  [key: string]: any; 
+}
+
 export default function CommunityScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { getCommunityById, getPostsByCommunity, toggleCommunityJoin } = useDatabase();
 
   const communityId = id || "";
-  const [details, setDetails] = useState<any>(null);
-  const [posts, setPosts] = useState<any[]>([]);
+  const [details, setDetails] = useState<CommunityDetails | null>(null);
+  const [posts, setPosts] = useState<PostItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isJoining, setIsJoining] = useState(false);
 
@@ -22,18 +41,23 @@ export default function CommunityScreen() {
       async function loadCommunity() {
         if (!communityId) return;
         setLoading(true);
-        const commData = await getCommunityById(communityId);
-        if (commData) {
-          setDetails({
-            ...commData,
-            banner:
-              commData.banner_url ||
-              "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=2000&auto=format&fit=crop",
-          });
-          const commPosts = await getPostsByCommunity(commData.name);
-          setPosts(commPosts);
+        try {
+          const commData = await getCommunityById(communityId);
+          if (commData) {
+            setDetails({
+              ...commData,
+              banner:
+                commData.banner_url ||
+                "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=2000&auto=format&fit=crop",
+            });
+            const commPosts = await getPostsByCommunity(commData.name);
+            setPosts(commPosts || []);
+          }
+        } catch (error) {
+          console.error("Erro ao carregar dados da comunidade:", error);
+        } finally {
+          setLoading(false);
         }
-        setLoading(false);
       }
       loadCommunity();
     }, [communityId])
@@ -42,10 +66,17 @@ export default function CommunityScreen() {
   const handleToggleJoin = async () => {
     if (!details || isJoining) return;
     setIsJoining(true);
-    const newStatus = details.is_joined === 1 ? 0 : 1;
-    const success = await toggleCommunityJoin(communityId, newStatus === 1);
-    if (success) setDetails({ ...details, is_joined: newStatus });
-    setIsJoining(false);
+    try {
+      const newStatus = details.is_joined === 1 ? 0 : 1;
+      const success = await toggleCommunityJoin(communityId, newStatus === 1);
+      if (success) {
+        setDetails({ ...details, is_joined: newStatus });
+      }
+    } catch (error) {
+      console.error("Erro ao alternar inscrição na comunidade:", error);
+    } finally {
+      setIsJoining(false);
+    }
   };
 
   if (loading) {
@@ -78,7 +109,10 @@ export default function CommunityScreen() {
       <View style={styles.infoContainer}>
         <View style={styles.titleRow}>
           <View style={styles.iconPlaceholder}>
-            <Text style={styles.iconText}>{details.name.charAt(4).toUpperCase()}</Text>
+            {/* CORREÇÃO: Alterado de charAt(4) para charAt(0) para pegar a primeira letra correta */}
+            <Text style={styles.iconText}>
+              {details.name ? details.name.charAt(0).toUpperCase() : ""}
+            </Text>
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.name}>{details.name}</Text>
@@ -104,7 +138,7 @@ export default function CommunityScreen() {
       <LinearGradient colors={["#050510", "#050510", "#170326"]} style={StyleSheet.absoluteFill} />
       <FlatList
         data={posts}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => <PostCard item={item} />}
         ListHeaderComponent={renderHeader}
         showsVerticalScrollIndicator={false}
