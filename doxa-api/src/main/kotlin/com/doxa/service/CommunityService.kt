@@ -33,14 +33,14 @@ class CommunityService(private val communityRepository: CommunityRepository) {
     @Transactional
     fun updateCommunity(id: String, community: Community): Community {
         return communityRepository.findById(id).map { existingCommunity ->
-            existingCommunity.apply {
+            val updated = existingCommunity.apply {
                 this.name = community.name
                 this.description = community.description
                 this.members = community.members
                 this.bannerUrl = community.bannerUrl
                 this.updatedAt = LocalDateTime.now()
             }
-            communityRepository.save(this)
+            communityRepository.save(updated)
         }.orElseThrow { RuntimeException("Comunidade não encontrada") }
     }
 

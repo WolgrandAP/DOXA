@@ -63,12 +63,13 @@ class CommunityController(private val communityService: CommunityService) {
         return try {
             val success = communityService.addMemberToCommunity(id, userId)
             if (success) {
-                ResponseEntity.ok(mapOf("success" to true, "message" to "Membro adicionado com sucesso"))
+                ResponseEntity.ok(mapOf<String, Any>("success" to true, "message" to "Membro adicionado com sucesso"))
             } else {
-                ResponseEntity.badRequest().body(mapOf("success" to false, "message" to "Erro ao adicionar membro"))
+                ResponseEntity.badRequest().body(mapOf<String, Any>("success" to false, "message" to "Erro ao adicionar membro"))
             }
         } catch (e: Exception) {
-            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(mapOf("success" to false, "message" to e.message))
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf<String, Any>("success" to false, "message" to (e.message ?: "Erro interno")))
         }
     }
 }

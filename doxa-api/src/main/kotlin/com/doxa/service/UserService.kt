@@ -29,7 +29,7 @@ class UserService(private val userRepository: UserRepository) {
     @Transactional
     fun updateUser(id: String, user: User): User {
         return userRepository.findById(id).map { existingUser ->
-            existingUser.apply {
+            val updated = existingUser.apply {
                 this.name = user.name
                 this.email = user.email
                 this.handle = user.handle
@@ -40,7 +40,7 @@ class UserService(private val userRepository: UserRepository) {
                 this.following = user.following
                 this.password = user.password
             }
-            userRepository.save(this)
+            userRepository.save(updated)
         }.orElseThrow { RuntimeException("Usuário não encontrado") }
     }
 

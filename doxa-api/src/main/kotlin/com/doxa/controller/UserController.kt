@@ -58,12 +58,12 @@ class UserController(
         return try {
             val success = userService.followUser(followerId, followedId)
             if (success) {
-                ResponseEntity.ok(mapOf("success" to true, "message" to "Usuário seguido com sucesso"))
+                ResponseEntity.ok(mapOf<String, Any>("success" to true, "message" to "Usuário seguido com sucesso"))
             } else {
-                ResponseEntity.badRequest().body(mapOf("success" to false, "message" to "Não foi possível seguir o usuário"))
+                ResponseEntity.badRequest().body(mapOf<String, Any>("success" to false, "message" to "Não foi possível seguir o usuário"))
             }
         } catch (e: Exception) {
-            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(mapOf("success" to false, "message" to e.message))
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(mapOf<String, Any>("success" to false, "message" to (e.message ?: "Erro interno")))
         }
     }
 
@@ -72,12 +72,12 @@ class UserController(
         return try {
             val success = userService.unfollowUser(followerId, followedId)
             if (success) {
-                ResponseEntity.ok(mapOf("success" to true, "message" to "Usuário deixado de seguir com sucesso"))
+                ResponseEntity.ok(mapOf<String, Any>("success" to true, "message" to "Usuário deixado de seguir com sucesso"))
             } else {
-                ResponseEntity.badRequest().body(mapOf("success" to false, "message" to "Não foi possível deixar de seguir o usuário"))
+                ResponseEntity.badRequest().body(mapOf<String, Any>("success" to false, "message" to "Não foi possível deixar de seguir o usuário"))
             }
         } catch (e: Exception) {
-            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(mapOf("success" to false, "message" to e.message))
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(mapOf<String, Any>("success" to false, "message" to (e.message ?: "Erro interno")))
         }
     }
 

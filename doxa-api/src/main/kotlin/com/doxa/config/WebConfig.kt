@@ -7,8 +7,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 @Configuration
 class WebConfig : WebMvcConfigurer {
     override fun addCorsMappings(registry: CorsRegistry) {
-        registry.addMapping("/**") // Libera todas as rotas
-            .allowedOrigins("*")     // Em produção, você colocará o endereço do app
+        registry.addMapping("/**")
+            .allowedOrigins("*")
             .allowedMethods("GET", "POST", "PUT", "DELETE")
     }
 }
