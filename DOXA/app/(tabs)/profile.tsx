@@ -100,10 +100,14 @@ export default function ProfileScreen() {
                             );
                         }
                         if (joinedComms && joinedComms.length > 0) {
-                            combinedData.push({ id: "header_joined", type: "header", title: "Participando" });
-                            combinedData = combinedData.concat(
-                                joinedComms.map((c: any) => ({ ...c, type: "community" }))
-                            );
+                            const filteredJoined = joinedComms.filter((c: any) => c.creator_id !== currentUserId);
+                            
+                            if (filteredJoined.length > 0) {
+                                combinedData.push({ id: "header_joined", type: "header", title: "Participando" });
+                                combinedData = combinedData.concat(
+                                    filteredJoined.map((c: any) => ({ ...c, type: "community" }))
+                                );
+                            }
                         }
 
                         data = combinedData;

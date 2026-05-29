@@ -12,6 +12,8 @@ import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 
+import { useAuth } from "../contexts/AuthContext";
+
 export function PostCard({ item, initialSaved = false }: { item: any; initialSaved?: boolean }) {
   const router = useRouter();
   const [votes, setVotes] = useState(item.votes);
@@ -19,6 +21,7 @@ export function PostCard({ item, initialSaved = false }: { item: any; initialSav
   const [isSaved, setIsSaved] = useState(item.isSaved || initialSaved);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const db = useSQLiteContext();
+  const { user } = useAuth();
 
   const handleLike = async () => {
     const newVoted = !voted;
@@ -42,10 +45,16 @@ export function PostCard({ item, initialSaved = false }: { item: any; initialSav
   };
 
   const handleSave = async () => {
+    if (!user) return;
     const newSavedState = !isSaved;
     setIsSaved(newSavedState);
     try {
       await db.runAsync("UPDATE posts SET is_saved = ? WHERE id = ?", [newSavedState ? 1 : 0, item.id]);
+      if (newSavedState) {
+        await db.runAsync("INSERT OR IGNORE INTO user_saved_posts (user_id, post_id) VALUES (?, ?)", [user.id, item.id]);
+      } else {
+        await db.runAsync("DELETE FROM user_saved_posts WHERE user_id = ? AND post_id = ?", [user.id, item.id]);
+      }
     } catch (error) {
       console.error("Erro ao salvar o post:", error);
       setIsSaved(!newSavedState);

@@ -54,7 +54,6 @@ export default function CreateCommunityScreen() {
   };
 
   const handleNameChange = (text: string) => {
-    // Mantém apenas os caracteres válidos sanitizando o input em tempo real
     setName(text.replace(/[^a-zA-Z0-9_]/g, ""));
   };
 
