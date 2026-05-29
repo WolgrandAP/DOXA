@@ -19,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useDatabase } from "@/database/useDatabase";
+import { useAuth } from "../contexts/AuthContext";
 
 const AVAILABLE_TOPICS = [
   "Filosofia", "Teologia", "Política", "Ciência", "Tecnologia",
@@ -35,6 +36,8 @@ const NAME_REGEX = /^[a-zA-Z0-9_]{3,21}$/;
 export default function CreateCommunityScreen() {
   const router = useRouter();
   const { createCommunity, checkCommunityNameExists } = useDatabase();
+  
+  const { user: authUser } = useAuth();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -51,16 +54,24 @@ export default function CreateCommunityScreen() {
   };
 
   const handleNameChange = (text: string) => {
+    // Mantém apenas os caracteres válidos sanitizando o input em tempo real
     setName(text.replace(/[^a-zA-Z0-9_]/g, ""));
   };
 
   const pickBanner = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permissão necessária", "Precisamos de acesso às suas fotos para alterar o banner.");
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [16, 9],
       quality: 0.8,
     });
+
     if (!result.canceled && result.assets[0].uri) {
       setBannerUrl(result.assets[0].uri);
     }
@@ -78,36 +89,50 @@ export default function CreateCommunityScreen() {
     isNameValid &&
     description.trim().length > 0 &&
     selectedTopics.length >= 1 &&
-    selectedTopics.length <= MAX_TOPICS;
+    selectedTopics.length <= MAX_TOPICS &&
+    !!authUser; 
 
   const handleCreate = async () => {
     if (!isFormValid) return;
 
-    const communityId = name.toLowerCase();
-
-    const alreadyExists = await checkCommunityNameExists(name);
-    if (alreadyExists) {
-      Alert.alert(
-        "Nome já utilizado",
-        `Já existe uma comunidade chamada "${name}". Escolha outro nome.`
-      );
+    if (!authUser?.id) {
+      Alert.alert("Erro", "Você deve estar logado para criar uma comunidade.");
       return;
     }
 
-    const success = await createCommunity({
-      id: communityId,
-      name: `d://${communityId}`,
-      description,
-      bannerUrl: bannerUrl || undefined,
-    });
+    const communityId = name.toLowerCase();
 
-    if (success) {
-      router.back();
-      setTimeout(() => {
-        Alert.alert("Comunidade criada!", `"${name}" foi criada com sucesso.`);
-      }, 300);
-    } else {
-      Alert.alert("Erro", "Falha ao criar comunidade. Tente novamente.");
+    try {
+      const alreadyExists = await checkCommunityNameExists(name);
+      if (alreadyExists) {
+        Alert.alert(
+          "Nome já utilizado",
+          `Já existe uma comunidade chamada "${name}". Escolha outro nome.`
+        );
+        return;
+      }
+
+      const success = await createCommunity(
+        {
+          id: communityId,
+          name: `d://${communityId}`,
+          description,
+          bannerUrl: bannerUrl || undefined,
+        }, 
+        authUser.id 
+      );
+
+      if (success) {
+        router.back();
+        setTimeout(() => {
+          Alert.alert("Comunidade criada!", `"${name}" foi criada com sucesso.`);
+        }, 350);
+      } else {
+        Alert.alert("Erro", "Falha ao criar comunidade. Tente novamente.");
+      }
+    } catch (error) {
+      Alert.alert("Erro", "Ocorreu um erro inesperado ao verificar/criar a comunidade.");
+      console.error(error);
     }
   };
 
@@ -198,7 +223,6 @@ export default function CreateCommunityScreen() {
                   onChangeText={setDescription}
                   multiline
                   textAlignVertical="top"
-                  scrollEnabled={false}
                   maxLength={500}
                 />
                 {!description.trim() && (

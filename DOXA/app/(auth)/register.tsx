@@ -3,16 +3,18 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingVi
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { signUp } = useAuth();
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (name.trim() === '' || email.trim() === '' || password.trim() === '' || confirmPassword.trim() === '') {
       Alert.alert('Erro', 'Por favor, preencha todos os campos.');
       return;
@@ -23,14 +25,17 @@ export default function RegisterScreen() {
       return;
     }
     
-    console.log('Criando conta para:', name, email);
-    
-    Alert.alert('Sucesso', 'Sua conta foi criada!', [
-      { 
-        text: 'OK', 
-        onPress: () => router.replace('/(tabs)')
-      }
-    ]);
+    const success = await signUp(name, email, password);
+    if (success) {
+      Alert.alert('Sucesso', 'Sua conta foi criada!', [
+        { 
+          text: 'OK', 
+          onPress: () => router.replace('/(auth)/login')
+        }
+      ]);
+    } else {
+      Alert.alert('Erro', 'Não foi possível criar a conta. Tente outro e-mail.');
+    }
   };
 
   const handleNavigateToLogin = () => {
@@ -41,7 +46,6 @@ export default function RegisterScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       
-      {/* Background Gradient */}
       <LinearGradient
         colors={["#050510", "#050510", "#170326"]}
         style={StyleSheet.absoluteFill}

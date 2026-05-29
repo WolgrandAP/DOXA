@@ -261,13 +261,10 @@ export default function ProfileScreen() {
                 data={dbData}
                 keyExtractor={(item, index) => `${item.type}_${item.id || index}`}
                 renderItem={({ item }) => {
-                    // Se possuir a propriedade 'members', só pode ser uma comunidade
-                    if ('members' in item || item.isHeader || item.isEmpty) {
-                        if (item.isHeader) return <Text style={styles.sectionHeader}>{item.title}</Text>;
-                        if (item.isEmpty) return <Text style={styles.emptyText}>{item.text}</Text>;
-                        return renderCommunityItem({ item });
-                    }
-                    // Caso contrário, é um post
+                    if (item.type === 'header') return <Text style={styles.sectionHeader}>{item.title}</Text>;
+                    if (item.type === 'empty') return <Text style={styles.emptyText}>{item.text}</Text>;
+                    if (item.type === 'community') return renderCommunityItem({ item: item as CommunityItem });
+                    
                     return <PostCard item={item} initialSaved={activeTab === "saved"} />;
                 }}
                 ListHeaderComponent={renderHeader()}

@@ -3,22 +3,27 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingVi
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { signIn } = useAuth();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (email.trim() === '' || password.trim() === '') {
       Alert.alert('Erro', 'Por favor, preencha todos os campos.');
       return;
     }
     
-    console.log('Tentando fazer login com:', email);
-    
-    router.replace('/(tabs)');
+    const success = await signIn(email, password);
+    if (success) {
+      router.replace('/(tabs)');
+    } else {
+      Alert.alert('Erro', 'E-mail ou senha incorretos.');
+    }
   };
 
   const handleNavigateToRegister = () => {
@@ -29,7 +34,6 @@ export default function LoginScreen() {
     <View style={styles.container}>
     <StatusBar barStyle="light-content" />
     
-    {/* Background Gradient */}
     <LinearGradient
       colors={["#050510", "#050510", "#170326"]}
       style={StyleSheet.absoluteFill}
@@ -42,7 +46,7 @@ export default function LoginScreen() {
         >
           <View style={styles.content}>
             <View style={styles.header}>
-              <Text style={styles.title}>Bem-vindo(a) ao DOXA</Text>
+              <Text style={styles.title}>DOXA</Text>
               <Text style={styles.subtitle}>Faça login para continuar</Text>
             </View>
 
@@ -61,7 +65,6 @@ export default function LoginScreen() {
                   />
                 </View>
 
-        {/* Input de Senha */}
                 <View style={styles.inputContainer}>
                   <Text style={styles.label}>Senha</Text>
                   <TextInput
