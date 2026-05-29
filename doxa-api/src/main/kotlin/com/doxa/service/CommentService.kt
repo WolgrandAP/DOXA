@@ -3,8 +3,9 @@ package com.doxa.service
 import com.doxa.models.Comment
 import com.doxa.repository.CommentRepository
 import com.doxa.repository.PostRepository
-import jakarta.transaction.Transactional
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDateTime
 
 @Service
 class CommentService(
@@ -13,16 +14,50 @@ class CommentService(
 ) {
     fun getCommentsByPost(postId: String): List<Comment> = commentRepository.findByPostId(postId)
 
+    fun getCommentById(id: String) = commentRepository.findById(id)
+
     @Transactional
     fun addComment(comment: Comment): Comment {
         val post = postRepository.findById(comment.post.id)
             .orElseThrow { RuntimeException("Post não encontrado.") }
 
-        post.comments += 1
+        post.commentsCount += 1
+        post.updatedAt = LocalDateTime.now()
         postRepository.save(post)
 
         return commentRepository.save(comment)
     }
 
-    fun deleteComment(id: String) = commentRepository.deleteById(id)
+    @Transactional
+    fun updateComment(id: String, comment: Comment): Comment {
+        return commentRepository.findById(id).map { existingComment ->
+            existingComment.apply {
+                this.text = comment.text
+                this.updatedAt = LocalDateTime.now()
+            }
+            commentRepository.save(this)
+        }.orElseThrow { RuntimeException("Comentário não encontrado") }
+    }
+
+    @Transactional
+    fun deleteComment(id: String) {
+        commentRepository.findById(id).ifPresent { comment ->
+            val post = comment.post
+            post.commentsCount -= 1
+            post.updatedAt = LocalDateTime.now()
+            postRepository.save(post)
+            commentRepository.deleteById(id)
+        }
+    }
+
+    @Transactional
+    fun likeComment(id: String): Comment {
+        return commentRepository.findById(id).map { comment ->
+            comment.apply {
+                this.likes += 1
+                this.updatedAt = LocalDateTime.now()
+            }
+            commentRepository.save(this)
+        }.orElseThrow { RuntimeException("Comentário não encontrado") }
+    }
 }

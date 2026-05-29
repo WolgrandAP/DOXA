@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState } from 'react';
 import { useDatabase } from '../database/useDatabase';
+import { useSQLiteContext } from 'expo-sqlite';
+import { SyncService } from '../services/syncService';
 
 export interface User {
     id: number;
@@ -27,12 +29,31 @@ const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const { loginUser, registerUser, getUserById } = useDatabase();
+    const db = useSQLiteContext();
+
+    // Helper para disparar sync
+    const triggerSync = async () => {
+        try {
+            const syncService = new SyncService(db);
+            console.log("🔄 Iniciando sync após autenticação...");
+            await syncService.pullSync(); // Primeiro pull para atualizar dados
+            await syncService.pushSync(); // Depois push para enviar dados locais
+            console.log("✅ Sync concluído com sucesso!");
+        } catch (error) {
+            console.warn("⚠️ Erro ao fazer sync (continuando mesmo assim):", error);
+            // Não falha o login se sync falhar
+        }
+    };
 
     const signIn = async (email: string, pass: string) => {
         try {
             const userData = await loginUser(email, pass);
             if (userData) {
                 setUser(userData);
+                
+                // Dispara sync em background
+                triggerSync().catch(console.warn);
+                
                 return true;
             }
         } catch (error) {
@@ -48,6 +69,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const userData = await getUserById(newUserId);
                 if (userData) {
                     setUser(userData);
+                    
+                    // Dispara sync em background
+                    triggerSync().catch(console.warn);
+                    
                     return true;
                 }
             }

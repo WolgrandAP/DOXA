@@ -19,7 +19,8 @@ export async function initializeDatabase(database: SQLiteDatabase) {
                 avatarUrl TEXT,
                 bannerUrl TEXT,
                 followers INTEGER DEFAULT 0,
-                following INTEGER DEFAULT 0
+                following INTEGER DEFAULT 0,
+                is_synced INTEGER DEFAULT 0
             );
 
             CREATE TABLE IF NOT EXISTS communities (
@@ -29,7 +30,10 @@ export async function initializeDatabase(database: SQLiteDatabase) {
                 description TEXT,
                 is_joined INTEGER DEFAULT 0,
                 creator_id INTEGER,
-                banner_url TEXT
+                banner_url TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                is_synced INTEGER DEFAULT 0
             );
 
             CREATE TABLE IF NOT EXISTS posts (
@@ -47,20 +51,25 @@ export async function initializeDatabase(database: SQLiteDatabase) {
                 comments_count INTEGER DEFAULT 0,
                 is_saved INTEGER DEFAULT 0,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                is_synced INTEGER DEFAULT 0,
                 FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
             );
 
             CREATE TABLE IF NOT EXISTS comments (
                 id TEXT PRIMARY KEY,
                 post_id TEXT NOT NULL,
-                author TEXT NOT NULL,
-                avatar TEXT,
+                user_id INTEGER NOT NULL,
                 text TEXT NOT NULL,
                 time TEXT,
                 likes INTEGER DEFAULT 0,
                 isLiked INTEGER DEFAULT 0,
                 replies TEXT DEFAULT '[]',
-                FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE
+                is_synced INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
             );
 
             CREATE TABLE IF NOT EXISTS user_saved_posts (

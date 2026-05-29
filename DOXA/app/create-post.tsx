@@ -21,6 +21,7 @@ import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useSQLiteContext } from "expo-sqlite";
 import { useDatabase } from "@/database/useDatabase";
+import { SyncService } from "@/services/syncService";
 
 export default function CreatePostScreen() {
     const router = useRouter();

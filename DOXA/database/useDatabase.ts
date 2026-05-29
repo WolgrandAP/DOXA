@@ -186,8 +186,8 @@ export function useDatabase() {
             }
 
             const result = await db.runAsync(
-                `INSERT INTO posts (id, user_id, author, title, description, subject, tag, role, time, image_url)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                `INSERT INTO posts (id, user_id, author, title, description, subject, tag, role, time, image_url, is_synced)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
                 [
                     post.id,
                     userId,
@@ -201,6 +201,13 @@ export function useDatabase() {
                     post.image_url || null,
                 ]
             );
+
+            // Tenta sincronizar em background
+            import('../services/syncService').then(({ SyncService }) => {
+                const sync = new SyncService(db);
+                sync.pushSync();
+            });
+
             return result.changes > 0;
         } catch (error) {
             console.error("Erro ao criar post:", error);
@@ -237,8 +244,8 @@ export function useDatabase() {
                 : userId;
 
             const result = await db.runAsync(
-                `INSERT INTO communities (id, name, members, description, is_joined, creator_id, banner_url)
-                VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                `INSERT INTO communities (id, name, members, description, is_joined, creator_id, banner_url, is_synced)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
                 [
                     community.id, 
                     community.name, 
@@ -255,6 +262,12 @@ export function useDatabase() {
                     "INSERT OR IGNORE INTO user_communities (user_id, community_id) VALUES (?, ?)",
                     [normalizedUserId, community.id]
                 );
+
+                // Tenta sincronizar em background
+                import('../services/syncService').then(({ SyncService }) => {
+                    const sync = new SyncService(db);
+                    sync.pushSync();
+                });
             }
 
             return result.changes > 0;
