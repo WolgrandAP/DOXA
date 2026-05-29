@@ -19,7 +19,7 @@ class CommentService(
     @Transactional
     fun addComment(comment: Comment): Comment {
         val post = postRepository.findById(comment.post.id)
-            .orElseThrow { RuntimeException("Post não encontrado.") }
+            .orElseThrow { RuntimeException("Post not found.") }
 
         post.commentsCount += 1
         post.updatedAt = LocalDateTime.now()
@@ -35,8 +35,8 @@ class CommentService(
                 this.text = comment.text
                 this.updatedAt = LocalDateTime.now()
             }
-            commentRepository.save(this)
-        }.orElseThrow { RuntimeException("Comentário não encontrado") }
+            commentRepository.save(existingComment)
+        }.orElseThrow { RuntimeException("Comment not found") }
     }
 
     @Transactional
@@ -57,7 +57,7 @@ class CommentService(
                 this.likes += 1
                 this.updatedAt = LocalDateTime.now()
             }
-            commentRepository.save(this)
-        }.orElseThrow { RuntimeException("Comentário não encontrado") }
+            commentRepository.save(comment)
+        }.orElseThrow { RuntimeException("Comment not found") }
     }
 }

@@ -20,8 +20,8 @@ class UserService(private val userRepository: UserRepository) {
         return userRepository.save(user)
     }
 
-    fun existsUserByUsername(username: String): Boolean {
-        return userRepository.existsByUsername(username)
+    fun existsUserByHandle(handle: String): Boolean {
+        return userRepository.existsByHandle(handle)
     }
 
     fun findByEmail(email: String) = userRepository.findByEmail(email)

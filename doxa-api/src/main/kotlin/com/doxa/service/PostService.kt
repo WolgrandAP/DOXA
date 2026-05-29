@@ -11,8 +11,8 @@ class PostService(private val postRepository: PostRepository) {
 
     fun getAllPosts(): List<Post> = postRepository.findAll()
 
-    fun getPostsByCommunity(communityName: String): List<Post> {
-        return postRepository.findByCommunityName(communityName)
+    fun getPostsByCommunity(subject: String): List<Post> {
+        return postRepository.findBySubject(subject)
     }
 
     fun getPostsByTag(tagName: String): List<Post> {
@@ -38,8 +38,8 @@ class PostService(private val postRepository: PostRepository) {
                 this.imageUrl = post.imageUrl
                 this.updatedAt = LocalDateTime.now()
             }
-            postRepository.save(this)
-        }.orElseThrow { RuntimeException("Post não encontrado") }
+            postRepository.save(existingPost)
+        }.orElseThrow { RuntimeException("Post not found") }
     }
 
     @Transactional
@@ -54,7 +54,7 @@ class PostService(private val postRepository: PostRepository) {
                 this.upvotes += 1
                 this.updatedAt = LocalDateTime.now()
             }
-            postRepository.save(this)
-        }.orElseThrow { RuntimeException("Post não encontrado") }
+            postRepository.save(post)
+        }.orElseThrow { RuntimeException("Post not found") }
     }
 }
