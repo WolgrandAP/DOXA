@@ -20,11 +20,9 @@ class SyncService(
 ) {
     @Transactional
     fun pushSync(request: SyncPushRequest) {
-        // 1. Sync users first (other entities depend on them)
         for (dto in request.users) {
             val user = userRepository.findById(dto.id).orElse(null)
             if (user != null) {
-                // Update existing user
                 user.name = dto.name
                 user.email = dto.email
                 user.password = dto.password
@@ -37,7 +35,6 @@ class SyncService(
                 user.isSynced = 1
                 userRepository.save(user)
             } else {
-                // Create new user
                 val newUser = User(
                     id = dto.id,
                     name = dto.name,
@@ -55,7 +52,6 @@ class SyncService(
             }
         }
 
-        // 2. Sync communities
         for (dto in request.communities) {
             val community = communityRepository.findById(dto.id).orElse(null)
             if (community != null) {
@@ -85,7 +81,6 @@ class SyncService(
             }
         }
 
-        // 3. Sync posts
         for (dto in request.posts) {
             val post = postRepository.findById(dto.id).orElse(null)
             if (post != null) {
@@ -127,7 +122,6 @@ class SyncService(
             }
         }
 
-        // 4. Sync comments
         for (dto in request.comments) {
             val comment = commentRepository.findById(dto.id).orElse(null)
             if (comment != null) {
@@ -157,7 +151,6 @@ class SyncService(
             }
         }
 
-        // 5. Sync relationships
         for (rel in request.userSavedPosts) {
             val id = UserSavedPostId(rel.userId, rel.postId)
             if (!userSavedPostRepository.existsById(id)) {
@@ -184,7 +177,6 @@ class SyncService(
     fun pullSync(): SyncPullResponse {
         val currentServerTime = LocalDateTime.now()
 
-        // Fetch all data from PostgreSQL
         val users = userRepository.findAll().map { user ->
             SyncUserDTO(
                 id = user.id,

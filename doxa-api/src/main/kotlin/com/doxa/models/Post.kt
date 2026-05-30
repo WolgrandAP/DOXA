@@ -12,7 +12,6 @@ class Post(
     @Column(name = "user_id")
     var userId: Long = 0,
 
-    // Stores the author's display name directly (matches frontend SQLite schema)
     var author: String = "",
 
     var title: String = "",

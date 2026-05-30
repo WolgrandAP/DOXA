@@ -15,7 +15,6 @@ class Comment(
     @Column(name = "user_id", nullable = false)
     var userId: Long = 0,
 
-    // Frontend stores author name and avatar directly in the comments table
     var author: String? = null,
     var avatar: String? = null,
 

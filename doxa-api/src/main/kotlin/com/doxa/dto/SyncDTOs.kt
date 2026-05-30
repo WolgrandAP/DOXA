@@ -2,12 +2,6 @@ package com.doxa.dto
 
 import java.time.LocalDateTime
 
-// ============================================================
-// DTOs that match exactly what the React Native frontend sends/expects
-// ============================================================
-
-// --- Push Request (what the frontend sends) ---
-
 data class SyncPushRequest(
     val users: List<SyncUserDTO> = emptyList(),
     val posts: List<SyncPostDTO> = emptyList(),
@@ -17,8 +11,6 @@ data class SyncPushRequest(
     val userCommunities: List<UserCommunityRelation> = emptyList(),
     val userFollows: List<UserFollowRelation> = emptyList()
 )
-
-// --- Pull Response (what the frontend expects) ---
 
 data class SyncPullResponse(
     val serverTimestamp: LocalDateTime,
@@ -30,8 +22,6 @@ data class SyncPullResponse(
     val userCommunities: List<UserCommunityRelation> = emptyList(),
     val userFollows: List<UserFollowRelation> = emptyList()
 )
-
-// --- Flat DTOs matching the SQLite schema from the frontend ---
 
 data class SyncUserDTO(
     val id: Long = 0,
@@ -94,8 +84,6 @@ data class SyncCommentDTO(
     val created_at: String? = null,
     val updated_at: String? = null
 )
-
-// --- Relationship DTOs ---
 
 data class UserPostRelation(val userId: Long = 0, val postId: String = "")
 data class UserCommunityRelation(val userId: Long = 0, val communityId: String = "")

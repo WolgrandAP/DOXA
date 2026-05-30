@@ -3,10 +3,6 @@ package com.doxa.models
 import jakarta.persistence.*
 import java.io.Serializable
 
-// ============================================================
-// Join table entities matching the frontend SQLite schema
-// ============================================================
-
 @Entity
 @Table(name = "user_saved_posts")
 @IdClass(UserSavedPostId::class)

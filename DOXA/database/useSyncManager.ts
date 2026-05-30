@@ -50,10 +50,9 @@ export function useSyncManager() {
         }));
 
         if (showNotification) {
-          console.log("✅ Dados enviados com sucesso!");
+          console.log("Dados enviados com sucesso!");
         }
 
-        // Reset retry attempts on success
         retryAttemptsRef.current = 0;
       } catch (error: any) {
         console.error("Erro ao fazer Push Sync:", error);
@@ -61,11 +60,11 @@ export function useSyncManager() {
         if (retryAttemptsRef.current < MAX_RETRY_ATTEMPTS) {
           retryAttemptsRef.current += 1;
           console.log(
-            `⏳ Tentando novamente em ${RETRY_DELAY_MS}ms... (Tentativa ${retryAttemptsRef.current}/${MAX_RETRY_ATTEMPTS})`
+            `Tentando novamente em ${RETRY_DELAY_MS}ms... (Tentativa ${retryAttemptsRef.current}/${MAX_RETRY_ATTEMPTS})`
           );
 
           await delay(RETRY_DELAY_MS);
-          await pushSync(false); // Retry without notification
+          await pushSync(false);
         } else {
           const errorMessage =
             error?.message || "Erro ao sincronizar dados para o servidor";
@@ -109,7 +108,7 @@ export function useSyncManager() {
         isOnline: true,
       }));
 
-      console.log("✅ Dados recebidos com sucesso!");
+      console.log("Dados recebidos com sucesso!");
       retryAttemptsRef.current = 0;
     } catch (error: any) {
       console.error("Erro ao fazer Pull Sync:", error);
@@ -117,11 +116,11 @@ export function useSyncManager() {
       if (retryAttemptsRef.current < MAX_RETRY_ATTEMPTS) {
         retryAttemptsRef.current += 1;
         console.log(
-          `⏳ Tentando novamente em ${RETRY_DELAY_MS}ms... (Tentativa ${retryAttemptsRef.current}/${MAX_RETRY_ATTEMPTS})`
+          `Tentando novamente em ${RETRY_DELAY_MS}ms... (Tentativa ${retryAttemptsRef.current}/${MAX_RETRY_ATTEMPTS})`
         );
 
         await delay(RETRY_DELAY_MS);
-        await pullSync(); // Retry
+        await pullSync();
       } else {
         const errorMessage = error?.message || "Erro ao sincronizar dados";
 
