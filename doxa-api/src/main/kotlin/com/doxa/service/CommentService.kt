@@ -18,7 +18,7 @@ class CommentService(
 
     @Transactional
     fun addComment(comment: Comment): Comment {
-        val post = postRepository.findById(comment.post.id)
+        val post = postRepository.findById(comment.postId)
             .orElseThrow { RuntimeException("Post not found.") }
 
         post.commentsCount += 1
@@ -42,10 +42,12 @@ class CommentService(
     @Transactional
     fun deleteComment(id: String) {
         commentRepository.findById(id).ifPresent { comment ->
-            val post = comment.post
-            post.commentsCount -= 1
-            post.updatedAt = LocalDateTime.now()
-            postRepository.save(post)
+            val post = postRepository.findById(comment.postId).orElse(null)
+            if (post != null) {
+                post.commentsCount -= 1
+                post.updatedAt = LocalDateTime.now()
+                postRepository.save(post)
+            }
             commentRepository.deleteById(id)
         }
     }

@@ -57,19 +57,4 @@ class CommunityController(private val communityService: CommunityService) {
             ResponseEntity.notFound().build()
         }
     }
-
-    @PostMapping("/{id}/add-member/{userId}")
-    fun addMember(@PathVariable id: String, @PathVariable userId: String): ResponseEntity<Map<String, Any>> {
-        return try {
-            val success = communityService.addMemberToCommunity(id, userId)
-            if (success) {
-                ResponseEntity.ok(mapOf<String, Any>("success" to true, "message" to "Membro adicionado com sucesso"))
-            } else {
-                ResponseEntity.badRequest().body(mapOf<String, Any>("success" to false, "message" to "Erro ao adicionar membro"))
-            }
-        } catch (e: Exception) {
-            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(mapOf<String, Any>("success" to false, "message" to (e.message ?: "Erro interno")))
-        }
-    }
 }

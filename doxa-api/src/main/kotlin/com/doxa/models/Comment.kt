@@ -7,16 +7,17 @@ import java.time.LocalDateTime
 @Table(name = "comments")
 class Comment(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     val id: String = "",
 
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    val author: User = User(),
+    @Column(name = "post_id", nullable = false)
+    var postId: String = "",
 
-    @ManyToOne
-    @JoinColumn(name = "post_id", nullable = false)
-    val post: Post = Post(),
+    @Column(name = "user_id", nullable = false)
+    var userId: Long = 0,
+
+    // Frontend stores author name and avatar directly in the comments table
+    var author: String? = null,
+    var avatar: String? = null,
 
     @Column(columnDefinition = "TEXT", nullable = false)
     var text: String = "",

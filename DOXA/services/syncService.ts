@@ -19,19 +19,29 @@ export class SyncService {
 
             console.log(`Found: ${unsyncedPosts.length} posts, ${unsyncedCommunities.length} communities, ${unsyncedComments.length} comments, ${unsyncedUsers.length} users to sync`);
 
-            // Buscar relacionamentos não sincronizados
+            // Fetch all relationships to sync
             const userSavedPosts = await this.db.getAllAsync<any>("SELECT * FROM user_saved_posts");
             const userCommunities = await this.db.getAllAsync<any>("SELECT * FROM user_communities");
             const userFollows = await this.db.getAllAsync<any>("SELECT * FROM user_follows");
 
+            // Map relationships to match backend DTO field names (camelCase)
             const pushPayload = {
                 posts: unsyncedPosts,
                 communities: unsyncedCommunities,
                 comments: unsyncedComments,
                 users: unsyncedUsers,
-                userSavedPosts: userSavedPosts,
-                userCommunities: userCommunities,
-                userFollows: userFollows
+                userSavedPosts: userSavedPosts.map((r: any) => ({
+                    userId: r.user_id,
+                    postId: r.post_id
+                })),
+                userCommunities: userCommunities.map((r: any) => ({
+                    userId: r.user_id,
+                    communityId: r.community_id
+                })),
+                userFollows: userFollows.map((r: any) => ({
+                    followerId: r.follower_id,
+                    followedId: r.followed_id
+                }))
             };
 
             if (unsyncedPosts.length > 0 || unsyncedCommunities.length > 0 || unsyncedComments.length > 0 || unsyncedUsers.length > 0) {
@@ -39,7 +49,7 @@ export class SyncService {
                 const response = await api.post('/sync/push', pushPayload);
                 console.log("✅ Response do servidor:", response.status);
 
-                // Marca como sincronizado no SQLite local
+                // Mark as synced locally
                 if (unsyncedPosts.length > 0) {
                     await this.db.runAsync("UPDATE posts SET is_synced = 1 WHERE is_synced = 0");
                     console.log("✅ Posts marcados como sincronizados");
@@ -63,7 +73,7 @@ export class SyncService {
             }
         } catch (error) {
             console.error("❌ Erro ao fazer Push Sync:", error);
-            throw error; // Propagar erro para retry logic
+            throw error; // Propagate error for retry logic
         }
     }
 
@@ -76,25 +86,54 @@ export class SyncService {
 
             console.log("📥 Recebendo dados do servidor...");
 
-            // Insere os posts recebidos do servidor no SQLite local
+            // Insert/update users from server (flat DTO format)
+            for (const user of data.users || []) {
+                try {
+                    await this.db.runAsync(`
+                        INSERT OR REPLACE INTO users (id, name, email, password, handle, bio, avatarUrl, bannerUrl, followers, following, is_synced)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                    `, [
+                        user.id,
+                        user.name,
+                        user.email,
+                        user.password || '',
+                        user.handle,
+                        user.bio,
+                        user.avatarUrl,
+                        user.bannerUrl,
+                        user.followers || 0,
+                        user.following || 0
+                    ]);
+                } catch (e) {
+                    console.warn("⚠️ Erro ao inserir usuário:", user.id, e);
+                }
+            }
+            if ((data.users || []).length > 0) {
+                console.log(`✅ ${data.users.length} usuários sincronizados`);
+            }
+
+            // Insert/update posts from server (flat DTO format - snake_case fields)
             for (const post of data.posts || []) {
                 try {
                     await this.db.runAsync(`
-                        INSERT OR IGNORE INTO posts (id, user_id, author, title, description, subject, tag, role, time, image_url, created_at, updated_at, is_synced)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                        INSERT OR REPLACE INTO posts (id, user_id, author, title, description, subject, tag, role, time, image_url, upvotes, comments_count, is_saved, created_at, updated_at, is_synced)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
                     `, [
                         post.id,
-                        post.author?.id || post.userId || 1,
-                        post.author?.name || "Autor",
+                        post.user_id,
+                        post.author || "Autor",
                         post.title,
                         post.description,
                         post.subject,
                         post.tag,
-                        post.role,
+                        post.role || "",
                         post.time || "agora",
-                        post.imageUrl,
-                        post.createdAt || new Date().toISOString(),
-                        post.updatedAt || new Date().toISOString()
+                        post.image_url,
+                        post.upvotes || 0,
+                        post.comments_count || 0,
+                        post.is_saved || 0,
+                        post.created_at || new Date().toISOString(),
+                        post.updated_at || new Date().toISOString()
                     ]);
                 } catch (e) {
                     console.warn("⚠️ Erro ao inserir post:", post.id, e);
@@ -104,22 +143,22 @@ export class SyncService {
                 console.log(`✅ ${data.posts.length} posts sincronizados`);
             }
 
-            // Insere as comunidades recebidas do servidor
+            // Insert/update communities from server
             for (const comm of data.communities || []) {
                 try {
                     await this.db.runAsync(`
-                        INSERT OR IGNORE INTO communities (id, name, members, description, is_joined, creator_id, banner_url, created_at, updated_at, is_synced)
+                        INSERT OR REPLACE INTO communities (id, name, members, description, is_joined, creator_id, banner_url, created_at, updated_at, is_synced)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
                     `, [
                         comm.id,
                         comm.name,
                         comm.members || "0",
                         comm.description,
-                        1,
-                        comm.creator?.id || comm.creatorId || 1,
-                        comm.bannerUrl,
-                        comm.createdAt || new Date().toISOString(),
-                        comm.updatedAt || new Date().toISOString()
+                        comm.is_joined || 0,
+                        comm.creator_id || 0,
+                        comm.banner_url,
+                        comm.created_at || new Date().toISOString(),
+                        comm.updated_at || new Date().toISOString()
                     ]);
                 } catch (e) {
                     console.warn("⚠️ Erro ao inserir comunidade:", comm.id, e);
@@ -129,21 +168,25 @@ export class SyncService {
                 console.log(`✅ ${data.communities.length} comunidades sincronizadas`);
             }
 
-            // Insere os comentários recebidos
+            // Insert/update comments from server
             for (const comment of data.comments || []) {
                 try {
                     await this.db.runAsync(`
-                        INSERT OR IGNORE INTO comments (id, post_id, user_id, text, time, likes, created_at, updated_at, is_synced)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+                        INSERT OR REPLACE INTO comments (id, post_id, user_id, author, avatar, text, time, likes, isLiked, replies, is_synced, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
                     `, [
                         comment.id,
-                        comment.post?.id || comment.postId,
-                        comment.author?.id || comment.userId || 1,
+                        comment.post_id,
+                        comment.user_id || 0,
+                        comment.author || "",
+                        comment.avatar || "",
                         comment.text,
                         comment.time || "agora",
                         comment.likes || 0,
-                        comment.createdAt || new Date().toISOString(),
-                        comment.updatedAt || new Date().toISOString()
+                        comment.isLiked || 0,
+                        comment.replies || "[]",
+                        comment.created_at || new Date().toISOString(),
+                        comment.updated_at || new Date().toISOString()
                     ]);
                 } catch (e) {
                     console.warn("⚠️ Erro ao inserir comentário:", comment.id, e);
@@ -153,7 +196,7 @@ export class SyncService {
                 console.log(`✅ ${data.comments.length} comentários sincronizados`);
             }
 
-            // Sincroniza relacionamentos
+            // Sync relationships
             for (const rel of data.userSavedPosts || []) {
                 try {
                     await this.db.runAsync(
@@ -190,7 +233,7 @@ export class SyncService {
             console.log("✅ Pull Sync finalizado com sucesso!");
         } catch (error) {
             console.error("❌ Erro ao fazer Pull Sync:", error);
-            throw error; // Propagar erro para retry logic
+            throw error; // Propagate error for retry logic
         }
     }
 }

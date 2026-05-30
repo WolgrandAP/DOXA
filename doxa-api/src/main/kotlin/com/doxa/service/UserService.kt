@@ -4,14 +4,13 @@ import com.doxa.models.User
 import com.doxa.repository.UserRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.time.LocalDateTime
 
 @Service
 class UserService(private val userRepository: UserRepository) {
 
     fun findAllUsers(): List<User> = userRepository.findAll()
 
-    fun findUserById(id: String) = userRepository.findById(id)
+    fun findUserById(id: Long) = userRepository.findById(id)
 
     fun saveUser(user: User): User {
         if (userRepository.findByEmail(user.email).isPresent) {
@@ -27,7 +26,7 @@ class UserService(private val userRepository: UserRepository) {
     fun findByEmail(email: String) = userRepository.findByEmail(email)
 
     @Transactional
-    fun updateUser(id: String, user: User): User {
+    fun updateUser(id: Long, user: User): User {
         return userRepository.findById(id).map { existingUser ->
             val updated = existingUser.apply {
                 this.name = user.name
@@ -45,45 +44,7 @@ class UserService(private val userRepository: UserRepository) {
     }
 
     @Transactional
-    fun deleteUser(id: String) {
+    fun deleteUser(id: Long) {
         userRepository.deleteById(id)
-    }
-
-    @Transactional
-    fun followUser(followerId: String, followedId: String): Boolean {
-        if (followerId == followedId) return false
-
-        return userRepository.findById(followerId).flatMap { follower ->
-            userRepository.findById(followedId).map { followed ->
-                if (!follower.followedUsers.contains(followed)) {
-                    follower.followedUsers.add(followed)
-                    follower.following += 1
-                    followed.followers += 1
-                    userRepository.save(follower)
-                    userRepository.save(followed)
-                    true
-                } else {
-                    false
-                }
-            }
-        }.orElse(false)
-    }
-
-    @Transactional
-    fun unfollowUser(followerId: String, followedId: String): Boolean {
-        return userRepository.findById(followerId).flatMap { follower ->
-            userRepository.findById(followedId).map { followed ->
-                if (follower.followedUsers.contains(followed)) {
-                    follower.followedUsers.remove(followed)
-                    follower.following -= 1
-                    followed.followers -= 1
-                    userRepository.save(follower)
-                    userRepository.save(followed)
-                    true
-                } else {
-                    false
-                }
-            }
-        }.orElse(false)
     }
 }

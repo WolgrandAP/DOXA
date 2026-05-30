@@ -1,6 +1,6 @@
 import { useSQLiteContext } from "expo-sqlite";
 import { useState, useCallback, useRef } from "react";
-import { SyncService } from "./syncService";
+import { SyncService } from "../services/syncService";
 import { Alert } from "react-native";
 
 export interface SyncStatus {

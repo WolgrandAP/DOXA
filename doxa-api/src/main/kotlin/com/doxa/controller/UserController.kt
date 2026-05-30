@@ -17,7 +17,7 @@ class UserController(
     fun getAllUsers(): List<User> = userService.findAllUsers()
 
     @GetMapping("/{id}")
-    fun getUserById(@PathVariable id: String): ResponseEntity<User> {
+    fun getUserById(@PathVariable id: Long): ResponseEntity<User> {
         return userService.findUserById(id)
             .map { ResponseEntity.ok(it) }
             .orElse(ResponseEntity.notFound().build())
@@ -34,7 +34,7 @@ class UserController(
     }
 
     @PutMapping("/{id}")
-    fun updateUser(@PathVariable id: String, @RequestBody user: User): ResponseEntity<User> {
+    fun updateUser(@PathVariable id: Long, @RequestBody user: User): ResponseEntity<User> {
         return try {
             val updatedUser = userService.updateUser(id, user)
             ResponseEntity.ok(updatedUser)
@@ -44,7 +44,7 @@ class UserController(
     }
 
     @DeleteMapping("/{id}")
-    fun deleteUser(@PathVariable id: String): ResponseEntity<Void> {
+    fun deleteUser(@PathVariable id: Long): ResponseEntity<Void> {
         return try {
             userService.deleteUser(id)
             ResponseEntity.noContent().build()
@@ -53,35 +53,7 @@ class UserController(
         }
     }
 
-    @PostMapping("/{followerId}/follow/{followedId}")
-    fun followUser(@PathVariable followerId: String, @PathVariable followedId: String): ResponseEntity<Map<String, Any>> {
-        return try {
-            val success = userService.followUser(followerId, followedId)
-            if (success) {
-                ResponseEntity.ok(mapOf<String, Any>("success" to true, "message" to "Usuário seguido com sucesso"))
-            } else {
-                ResponseEntity.badRequest().body(mapOf<String, Any>("success" to false, "message" to "Não foi possível seguir o usuário"))
-            }
-        } catch (e: Exception) {
-            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(mapOf<String, Any>("success" to false, "message" to (e.message ?: "Erro interno")))
-        }
-    }
-
-    @PostMapping("/{followerId}/unfollow/{followedId}")
-    fun unfollowUser(@PathVariable followerId: String, @PathVariable followedId: String): ResponseEntity<Map<String, Any>> {
-        return try {
-            val success = userService.unfollowUser(followerId, followedId)
-            if (success) {
-                ResponseEntity.ok(mapOf<String, Any>("success" to true, "message" to "Usuário deixado de seguir com sucesso"))
-            } else {
-                ResponseEntity.badRequest().body(mapOf<String, Any>("success" to false, "message" to "Não foi possível deixar de seguir o usuário"))
-            }
-        } catch (e: Exception) {
-            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(mapOf<String, Any>("success" to false, "message" to (e.message ?: "Erro interno")))
-        }
-    }
-
-    @GetMapping("/{email}/by-email")
+    @GetMapping("/by-email/{email}")
     fun getUserByEmail(@PathVariable email: String): ResponseEntity<User> {
         return userService.findByEmail(email)
             .map { ResponseEntity.ok(it) }

@@ -3,10 +3,8 @@ package com.doxa.controller
 import com.doxa.dto.SyncPullResponse
 import com.doxa.dto.SyncPushRequest
 import com.doxa.service.SyncService
-import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
-import java.time.LocalDateTime
 
 @RestController
 @RequestMapping("/api/sync")
@@ -20,12 +18,8 @@ class SyncController(private val syncService: SyncService) {
     }
 
     @GetMapping("/pull")
-    fun pull(
-        @RequestParam(required = false)
-        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-        lastSync: LocalDateTime?
-    ): ResponseEntity<SyncPullResponse> {
-        val response = syncService.pullSync(lastSync)
+    fun pull(): ResponseEntity<SyncPullResponse> {
+        val response = syncService.pullSync()
         return ResponseEntity.ok(response)
     }
 }

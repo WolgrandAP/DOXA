@@ -11,11 +11,11 @@ import java.util.Optional
 class CommunityService(private val communityRepository: CommunityRepository) {
 
     fun createCommunity(community: Community): Community {
-        if (community.name.isNullOrEmpty()) {
+        if (community.name.isEmpty()) {
             throw RuntimeException("Nome da comunidade é obrigatório.")
         }
 
-        if (community.description.isNullOrEmpty()) {
+        if (community.description.isEmpty()) {
             throw RuntimeException("Descrição da comunidade é obrigatória.")
         }
 
@@ -47,16 +47,5 @@ class CommunityService(private val communityRepository: CommunityRepository) {
     @Transactional
     fun deleteCommunity(id: String) {
         communityRepository.deleteById(id)
-    }
-
-    @Transactional
-    fun addMemberToCommunity(communityId: String, userId: String): Boolean {
-        return communityRepository.findById(communityId).map { community ->
-            val memberCount = community.members.toIntOrNull() ?: 0
-            community.members = (memberCount + 1).toString()
-            community.updatedAt = LocalDateTime.now()
-            communityRepository.save(community)
-            true
-        }.orElse(false)
     }
 }

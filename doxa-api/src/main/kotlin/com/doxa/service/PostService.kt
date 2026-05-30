@@ -19,6 +19,10 @@ class PostService(private val postRepository: PostRepository) {
         return postRepository.findByTag(tagName)
     }
 
+    fun getPostsByUserId(userId: Long): List<Post> {
+        return postRepository.findByUserId(userId)
+    }
+
     fun getPostById(id: String) = postRepository.findById(id)
 
     fun createPost(post: Post): Post {

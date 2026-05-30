@@ -1,33 +1,40 @@
 package com.doxa.models
 
 import jakarta.persistence.*
-import com.fasterxml.jackson.annotation.JsonIgnore
 import java.time.LocalDateTime
 
 @Entity
 @Table(name = "posts")
 class Post(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     val id: String = "",
 
-    var subject: String? = null,
+    @Column(name = "user_id")
+    var userId: Long = 0,
 
-    var tag: String? = null,
+    // Stores the author's display name directly (matches frontend SQLite schema)
+    var author: String = "",
+
     var title: String = "",
 
     @Column(columnDefinition = "TEXT")
     var description: String? = null,
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    val author: User = User(),
-
+    var subject: String? = null,
+    var tag: String? = null,
     var role: String = "",
     var time: String = "",
-    var upvotes: Int = 0,
-    var commentsCount: Int = 0,
+
+    @Column(name = "image_url")
     var imageUrl: String? = null,
+
+    var upvotes: Int = 0,
+
+    @Column(name = "comments_count")
+    var commentsCount: Int = 0,
+
+    @Column(name = "is_saved")
+    var isSaved: Int = 0,
 
     @Column(name = "created_at")
     var createdAt: LocalDateTime = LocalDateTime.now(),
@@ -38,14 +45,6 @@ class Post(
     @Column(name = "is_synced")
     var isSynced: Int = 1
 ) {
-    @OneToMany(mappedBy = "post", cascade = [CascadeType.ALL])
-    @JsonIgnore
-    var commentsList: MutableList<Comment> = mutableListOf()
-
-    @ManyToMany(mappedBy = "savedPosts")
-    @JsonIgnore
-    var savedByUsers: MutableList<User> = mutableListOf()
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Post) return false

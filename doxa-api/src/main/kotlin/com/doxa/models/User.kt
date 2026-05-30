@@ -7,8 +7,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 @Table(name = "users")
 class User(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    val id: String = "",
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    val id: Long = 0,
 
     @Column(nullable = false)
     var name: String = "",
@@ -28,39 +28,11 @@ class User(
     var bannerUrl: String? = null,
 
     var followers: Int = 0,
-    var following: Int = 0
+    var following: Int = 0,
+
+    @Column(name = "is_synced")
+    var isSynced: Int = 1
 ) {
-    @OneToMany(mappedBy = "author", cascade = [CascadeType.ALL])
-    @JsonIgnore
-    var postsList: MutableList<Post> = mutableListOf()
-
-    @ManyToMany
-    @JoinTable(
-        name = "user_saved_posts",
-        joinColumns = [JoinColumn(name = "user_id")],
-        inverseJoinColumns = [JoinColumn(name = "post_id")]
-    )
-    @JsonIgnore
-    var savedPosts: MutableList<Post> = mutableListOf()
-
-    @ManyToMany
-    @JoinTable(
-        name = "user_communities",
-        joinColumns = [JoinColumn(name = "user_id")],
-        inverseJoinColumns = [JoinColumn(name = "community_id")]
-    )
-    @JsonIgnore
-    var joinedCommunities: MutableList<Community> = mutableListOf()
-
-    @ManyToMany
-    @JoinTable(
-        name = "user_follows",
-        joinColumns = [JoinColumn(name = "follower_id")],
-        inverseJoinColumns = [JoinColumn(name = "followed_id")]
-    )
-    @JsonIgnore
-    var followedUsers: MutableList<User> = mutableListOf()
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is User) return false
