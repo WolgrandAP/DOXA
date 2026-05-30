@@ -31,3 +31,6 @@ build/
 # Sistema Operacional
 .DS_Store
 Thumbs.db
+
+# Variáveis de ambiente
+.env

@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: 
-    username: 
-    password: 
+    url: ${env.DB_URL}
+    username: ${env.DB_USERNAME}
+    password: ${env.DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -16,4 +16,4 @@ spring:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 
 server:
-  port: 8080
+  port: ${env.SERVER_PORT}
