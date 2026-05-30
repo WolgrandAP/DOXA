@@ -53,7 +53,7 @@ cd doxa-api
 cp .env.example .env
 ```
 
-Edite o `.env` com suas credenciais:
+Crie o `.env ` a partir do modelo do `.env.example ` com suas credenciais:
 
 ```env
 DB_URL=jdbc:postgresql://localhost:5432/doxa
@@ -61,8 +61,6 @@ DB_USERNAME=postgres
 DB_PASSWORD=sua_senha_aqui
 SERVER_PORT=8080
 ```
-
-> O arquivo `.env` está no `.gitignore` e **não será commitado**. Nunca suba credenciais para o repositório.
 
 #### 2.3. Rodar o backend
 
