@@ -10,7 +10,7 @@ export class SyncService {
 
     async pushSync() {
         try {
-            console.log("📤 Iniciando Push Sync...");
+            console.log("Iniciando Push Sync...");
             
             const unsyncedPosts = await this.db.getAllAsync<any>("SELECT * FROM posts WHERE is_synced = 0");
             const unsyncedCommunities = await this.db.getAllAsync<any>("SELECT * FROM communities WHERE is_synced = 0");
@@ -19,12 +19,10 @@ export class SyncService {
 
             console.log(`Found: ${unsyncedPosts.length} posts, ${unsyncedCommunities.length} communities, ${unsyncedComments.length} comments, ${unsyncedUsers.length} users to sync`);
 
-            // Fetch all relationships to sync
             const userSavedPosts = await this.db.getAllAsync<any>("SELECT * FROM user_saved_posts");
             const userCommunities = await this.db.getAllAsync<any>("SELECT * FROM user_communities");
             const userFollows = await this.db.getAllAsync<any>("SELECT * FROM user_follows");
 
-            // Map relationships to match backend DTO field names (camelCase)
             const pushPayload = {
                 posts: unsyncedPosts,
                 communities: unsyncedCommunities,
@@ -45,48 +43,46 @@ export class SyncService {
             };
 
             if (unsyncedPosts.length > 0 || unsyncedCommunities.length > 0 || unsyncedComments.length > 0 || unsyncedUsers.length > 0) {
-                console.log("📤 Enviando dados para o servidor...");
+                console.log("Enviando dados para o servidor...");
                 const response = await api.post('/sync/push', pushPayload);
-                console.log("✅ Response do servidor:", response.status);
+                console.log("Response do servidor:", response.status);
 
-                // Mark as synced locally
                 if (unsyncedPosts.length > 0) {
                     await this.db.runAsync("UPDATE posts SET is_synced = 1 WHERE is_synced = 0");
-                    console.log("✅ Posts marcados como sincronizados");
+                    console.log("Posts marcados como sincronizados");
                 }
                 if (unsyncedCommunities.length > 0) {
                     await this.db.runAsync("UPDATE communities SET is_synced = 1 WHERE is_synced = 0");
-                    console.log("✅ Comunidades marcadas como sincronizadas");
+                    console.log("Comunidades marcadas como sincronizadas");
                 }
                 if (unsyncedComments.length > 0) {
                     await this.db.runAsync("UPDATE comments SET is_synced = 1 WHERE is_synced = 0");
-                    console.log("✅ Comentários marcados como sincronizados");
+                    console.log("Comentários marcados como sincronizados");
                 }
                 if (unsyncedUsers.length > 0) {
                     await this.db.runAsync("UPDATE users SET is_synced = 1 WHERE is_synced = 0");
-                    console.log("✅ Usuários marcados como sincronizados");
+                    console.log("Usuários marcados como sincronizados");
                 }
 
-                console.log("✅ Push Sync finalizado com sucesso!");
+                console.log("Push Sync finalizado com sucesso!");
             } else {
-                console.log("ℹ️ Nenhum dado para sincronizar");
+                console.log("Nenhum dado para sincronizar");
             }
         } catch (error) {
-            console.error("❌ Erro ao fazer Push Sync:", error);
-            throw error; // Propagate error for retry logic
+            console.error("Erro ao fazer Push Sync:", error);
+            throw error;
         }
     }
 
     async pullSync() {
         try {
-            console.log("📥 Iniciando Pull Sync...");
+            console.log("Iniciando Pull Sync");
             
             const response = await api.get('/sync/pull');
             const data = response.data;
 
-            console.log("📥 Recebendo dados do servidor...");
+            console.log("Recebendo dados do servidor");
 
-            // Insert/update users from server (flat DTO format)
             for (const user of data.users || []) {
                 try {
                     await this.db.runAsync(`
@@ -105,14 +101,13 @@ export class SyncService {
                         user.following || 0
                     ]);
                 } catch (e) {
-                    console.warn("⚠️ Erro ao inserir usuário:", user.id, e);
+                    console.warn("Erro ao inserir usuário:", user.id, e);
                 }
             }
             if ((data.users || []).length > 0) {
-                console.log(`✅ ${data.users.length} usuários sincronizados`);
+                console.log(`${data.users.length} usuários sincronizados`);
             }
 
-            // Insert/update posts from server (flat DTO format - snake_case fields)
             for (const post of data.posts || []) {
                 try {
                     await this.db.runAsync(`
@@ -136,14 +131,13 @@ export class SyncService {
                         post.updated_at || new Date().toISOString()
                     ]);
                 } catch (e) {
-                    console.warn("⚠️ Erro ao inserir post:", post.id, e);
+                    console.warn("Erro ao inserir post:", post.id, e);
                 }
             }
             if ((data.posts || []).length > 0) {
-                console.log(`✅ ${data.posts.length} posts sincronizados`);
+                console.log(`${data.posts.length} posts sincronizados`);
             }
 
-            // Insert/update communities from server
             for (const comm of data.communities || []) {
                 try {
                     await this.db.runAsync(`
@@ -161,14 +155,13 @@ export class SyncService {
                         comm.updated_at || new Date().toISOString()
                     ]);
                 } catch (e) {
-                    console.warn("⚠️ Erro ao inserir comunidade:", comm.id, e);
+                    console.warn("Erro ao inserir comunidade:", comm.id, e);
                 }
             }
             if ((data.communities || []).length > 0) {
-                console.log(`✅ ${data.communities.length} comunidades sincronizadas`);
+                console.log(`${data.communities.length} comunidades sincronizadas`);
             }
 
-            // Insert/update comments from server
             for (const comment of data.comments || []) {
                 try {
                     await this.db.runAsync(`
@@ -189,14 +182,13 @@ export class SyncService {
                         comment.updated_at || new Date().toISOString()
                     ]);
                 } catch (e) {
-                    console.warn("⚠️ Erro ao inserir comentário:", comment.id, e);
+                    console.warn("Erro ao inserir comentário:", comment.id, e);
                 }
             }
             if ((data.comments || []).length > 0) {
-                console.log(`✅ ${data.comments.length} comentários sincronizados`);
+                console.log(`${data.comments.length} comentários sincronizados`);
             }
 
-            // Sync relationships
             for (const rel of data.userSavedPosts || []) {
                 try {
                     await this.db.runAsync(
@@ -204,7 +196,7 @@ export class SyncService {
                         [rel.userId, rel.postId]
                     );
                 } catch (e) {
-                    console.warn("⚠️ Erro ao sincronizar saved post:", e);
+                    console.warn("Erro ao sincronizar saved post:", e);
                 }
             }
 
@@ -215,7 +207,7 @@ export class SyncService {
                         [rel.userId, rel.communityId]
                     );
                 } catch (e) {
-                    console.warn("⚠️ Erro ao sincronizar user community:", e);
+                    console.warn("Erro ao sincronizar user community:", e);
                 }
             }
 
@@ -226,14 +218,14 @@ export class SyncService {
                         [rel.followerId, rel.followedId]
                     );
                 } catch (e) {
-                    console.warn("⚠️ Erro ao sincronizar follow:", e);
+                    console.warn("Erro ao sincronizar follow:", e);
                 }
             }
 
-            console.log("✅ Pull Sync finalizado com sucesso!");
+            console.log("Pull Sync finalizado com sucesso!");
         } catch (error) {
-            console.error("❌ Erro ao fazer Pull Sync:", error);
-            throw error; // Propagate error for retry logic
+            console.error("Erro ao fazer Pull Sync:", error);
+            throw error;
         }
     }
 }

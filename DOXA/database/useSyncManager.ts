@@ -142,7 +142,7 @@ export function useSyncManager() {
   }, [status.isSyncing]);
 
   const fullSync = useCallback(async () => {
-    console.log("🔄 Iniciando sincronização completa...");
+    console.log("Iniciando sincronização completa");
     await pullSync();
     await pushSync(false);
   }, [pullSync, pushSync]);
