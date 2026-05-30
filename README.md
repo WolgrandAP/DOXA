@@ -171,7 +171,3 @@ DOXA/
 | `POST` | `/api/posts` | Cria novo post |
 | `GET` | `/api/communities` | Lista todas as comunidades |
 | `GET` | `/api/comments/post/{postId}` | Busca comentários de um post |
-
-## Licença
-
-Este projeto está licenciado sob a licença Apache 2.0 — veja o arquivo [LICENSE](LICENSE) para detalhes.
